@@ -1,0 +1,1607 @@
+<!-- Output: html -->
+<!-- File: index.html -->
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>エスカレーター闘争</title>
+<meta name="description" content="あなたはエスカレーターを、歩きますか？立ち止まりますか？">
+<meta property="og:title" content="エスカレーター闘争">
+<meta property="og:description" content="あなたはエスカレーターを、歩きますか？立ち止まりますか？">
+<meta property="og:type" content="website">
+<!-- Xのリンクカード画像：ogp.png を置いたら YOUR-NAME と YOUR-REPO を書き換える（置かない場合はこの1行を削除） -->
+<meta property="og:image" content="https://YOUR-NAME.github.io/YOUR-REPO/ogp.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%8A%3C/text%3E%3C/svg%3E">
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden; background: #0d1116; color: #fff;
+    font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+  #hud { pointer-events: none; }
+  #sa {
+    position: fixed; top: 0; left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+    padding-top: env(safe-area-inset-top); padding-bottom: env(safe-area-inset-bottom);
+  }
+  #joy {
+    position: fixed; left: calc(18px + env(safe-area-inset-left)); bottom: calc(22px + env(safe-area-inset-bottom));
+    width: 130px; height: 130px; border-radius: 50%; touch-action: none;
+    background: rgba(255, 255, 255, .12); border: 2px solid rgba(255, 255, 255, .35);
+  }
+  #knob {
+    position: absolute; left: 50%; top: 50%; width: 58px; height: 58px; margin: -29px 0 0 -29px;
+    border-radius: 50%; background: rgba(255, 255, 255, .55); pointer-events: none;
+  }
+  .abtn {
+    position: fixed; width: 86px; height: 86px; border-radius: 50%; touch-action: none; padding: 0;
+    border: 3px solid rgba(255, 255, 255, .85); display: flex; flex-direction: column;
+    align-items: center; justify-content: center; gap: 1px; box-shadow: 0 3px 10px rgba(0, 0, 0, .45);
+  }
+  .abtn * { pointer-events: none; }
+  .abtn svg { width: 46px; height: 46px; }
+  .abtn span { font-size: 14px; font-weight: 800; line-height: 1; }
+  #punch { right: calc(116px + env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); background: rgba(255, 200, 70, .95); }
+  #punch span { color: #3a1d00; }
+  #guard { right: calc(18px + env(safe-area-inset-right)); bottom: calc(100px + env(safe-area-inset-bottom)); background: rgba(40, 120, 230, .95); }
+  #guard span { color: #fff; }
+  .abtn.on { transform: scale(.9); filter: brightness(1.2); }
+  #fade { position: fixed; inset: 0; z-index: 15; background: #000; opacity: 0; pointer-events: none; }
+  .screen {
+    position: fixed; inset: 0; z-index: 10; display: none; overflow-y: auto;
+    background: rgba(8, 10, 14, .86); touch-action: pan-y;
+  }
+  .screen.show { display: flex; }
+  .inner { margin: auto; padding: 24px 18px; width: min(100%, 520px); text-align: center; }
+  h1 { font-size: clamp(28px, 9vw, 52px); margin: 0 0 .3em; letter-spacing: .04em; line-height: 1.2; }
+  h1 span { color: #ff6b3d; }
+  h3 { margin: 1.2em 0 .3em; font-size: 16px; }
+  .q { font-size: 16px; line-height: 1.6; margin: .6em 0 1em; }
+  .q b { color: #ffd84d; }
+  .big { font-size: clamp(40px, 12vw, 64px); font-weight: 800; color: #ffd84d; margin: .1em 0 .3em; }
+  .btns { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: .7em 0; }
+  button { font: inherit; font-weight: 700; font-size: 16px; padding: .7em 1.2em; border: 0; border-radius: 10px; cursor: pointer; color: #111; background: #ffd84d; }
+  button.walk { background: #ff8a3d; }
+  button.stand { background: #5cc8ff; }
+  button.sub { background: #666; color: #fff; }
+  button.x { background: #000; color: #fff; border: 1px solid #555; }
+  button:disabled { opacity: .5; cursor: default; }
+  input {
+    font-size: 18px; padding: .6em .8em; border-radius: 10px; border: 2px solid #555; background: #1c2129;
+    color: #fff; width: min(100%, 280px); text-align: center; -webkit-user-select: text; user-select: text;
+  }
+  .err { color: #ff6b6b; font-size: 13px; min-height: 1.2em; margin: .3em 0; line-height: 1.5; }
+  .err.info { color: #aab4c0; }
+  .note { font-size: 11px; color: #9aa3ad; line-height: 1.7; margin: 1.8em auto 0; max-width: 340px; }
+  .badge { display: inline-block; margin: 0 0 .3em; padding: .45em 1.1em; border-radius: 999px; font-size: 15px; font-weight: 800; }
+  .gold { color: #3a2a00; background: linear-gradient(135deg, #fff3b0, #ffc93c 55%, #f0a500); }
+  .silver { color: #262b33; background: linear-gradient(135deg, #ffffff, #d3d9e0 50%, #9aa4af); }
+  .badge.gold { box-shadow: 0 2px 12px rgba(255, 201, 60, .45); }
+  .badge.silver { box-shadow: 0 2px 12px rgba(210, 220, 230, .4); }
+  .rn { display: inline-block; min-width: 2.1em; padding: .05em .4em; border-radius: 999px; text-align: center; font-weight: 800; }
+  .rk { font-size: 15px; margin: .2em 0 .5em; line-height: 1.6; }
+  .rk b { color: #ffd84d; font-size: 18px; }
+  .rk small { color: #aab4c0; font-size: 12px; }
+  .cap { font-size: 12px; color: #c9d1da; margin: .6em 0 0; line-height: 2; }
+  table { border-collapse: collapse; margin: .4em auto; font-size: 14px; }
+  td { padding: .25em .6em; border-bottom: 1px solid rgba(255, 255, 255, .12); text-align: left; }
+  td:last-child { text-align: right; font-weight: 700; }
+  .rankbox { max-height: 45vh; overflow-y: auto; border: 1px solid #333; border-radius: 8px; touch-action: pan-y; }
+  .rankbox table { width: 100%; margin: 0; }
+  tr.me td { background: rgba(255, 216, 77, .28); }
+  #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 20; background: #0d1116; font-size: 15px; padding: 20px; text-align: center; }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+<div id="sa"></div>
+<div id="joy"><div id="knob"></div></div>
+<button id="punch" class="abtn" aria-label="殴る">
+  <svg viewBox="0 0 64 64" stroke="#3b2414" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M3 22h8M1 31h9M3 40h8" stroke="#fff" stroke-width="3"/>
+    <g fill="#f6c08a">
+      <rect x="14" y="12" width="10" height="20" rx="5"/>
+      <rect x="23" y="10" width="10" height="22" rx="5"/>
+      <rect x="32" y="10" width="10" height="22" rx="5"/>
+      <rect x="41" y="12" width="9" height="20" rx="4.5"/>
+      <path d="M14 26h36v14c0 9-7 16-16 16h-4c-9 0-16-7-16-16z"/>
+      <path d="M14 31c6-3 15-2 20 4c2 3-1 6-4 5c-5-2-11-2-16 0z"/>
+    </g>
+  </svg>
+  <span>殴る</span>
+</button>
+<button id="guard" class="abtn" aria-label="防御">
+  <svg viewBox="0 0 64 64" stroke="#0d2a4d" stroke-width="2.6" stroke-linejoin="round">
+    <path fill="#e8f2ff" d="M32 5L54 12V30C54 44 45 53 32 59C19 53 10 44 10 30V12Z"/>
+    <path fill="#4aa3ff" stroke="none" d="M32 11.5L48 16.6V30C48 40.4 41.6 47.4 32 52.4Z"/>
+    <path fill="none" d="M32 11.5V52.4"/>
+  </svg>
+  <span>防御</span>
+</button>
+
+<div id="title" class="screen show"><div class="inner">
+  <h1>エスカレーター<span>闘争</span></h1>
+  <p class="q">あなたはエスカレーターを<br><b>歩きますか？ 立ち止まりますか？</b></p>
+  <input id="name" maxlength="12" placeholder="ユーザー名（12文字まで）" autocomplete="off">
+  <p id="nameMsg" class="err"></p>
+  <div class="btns">
+    <button class="walk" data-start="walk">右側を歩く</button>
+    <button class="stand" data-start="stand">右側で立ち止まる</button>
+  </div>
+  <p class="note">このゲームに登場するポスターに広告を載せて欲しい方を6名まで募集しています。載せて欲しい方は、直接DMをくださるとありがたいです。</p>
+</div></div>
+<div id="result" class="screen"><div class="inner" id="resultInner"></div></div>
+<div id="fade"></div>
+<div id="loading">読み込み中…</div>
+
+<script>
+  setTimeout(function () {
+    if (!window.__ok) {
+      var l = document.getElementById('loading');
+      if (l) l.textContent = '読み込みに失敗しました。通信環境を確認して再読み込みしてください。';
+    }
+  }, 12000);
+</script>
+<script type="module">
+// ===== three.js の読み込み（つながらないときは別の配信元を試す） =====
+let THREE;
+try {
+  THREE = await import('https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js');
+} catch (e) {
+  THREE = await import('https://unpkg.com/three@0.160.0/build/three.module.js');
+}
+
+// ===== 調整用パラメータ =====
+// タイムの目安（300段）：階段 約116秒／右側を歩く（邪魔なし）約65秒／立ち止まる 150秒
+// 投げ飛ばされると階段を転げ落ちて約9秒（重量級は約11秒）のロス → 4回前後で階段と同じくらいになる
+// ※段数や速さを変えたら、Supabase の submit_score にある「ありえない記録」の判定も見直すこと
+const CFG = {
+  STEPS: 300,            // 段数
+  ESC_SPEED: 2.0,        // エスカレーター速度（段/秒）
+  WALK_SPEED: 2.6,       // 歩行速度（段/秒）。階段はこの速さ、エスカレーター上は ESC_SPEED に加算
+  BACK_SPEED: 2.2,       // 下がる速度（段/秒）
+  BLOCKERS: 8,           // 「右側を歩く」の仁王立ちの人数（最後の1人が重量級）
+  WALKER_INTERVAL: [3.2, 5.0], // 「右側で立ち止まる」で登ってくる人の出現間隔（秒）
+  WALKER_INTERVAL_MIN: 0.75,   // 時間とともに出現間隔が縮むときの下限（上の秒数への倍率）
+  WALKER_GAP: 3,         // 登ってくる人どうしが空ける間隔（段）
+  PUNCH_DMG: 1, PUNCH_CD: 0.28,
+  WEAK_MULT: 2,          // スキへのダメージ倍率
+  JUST_GUARD: 0.25,      // ジャストガード受付（防御を押してから何秒以内に被弾したら成功か）
+  JUST_STAGGER: 1.2,     // ジャストガード成功時の相手の硬直（秒）
+  GUARD_CHIP: 0.25,      // 「右側で立ち止まる」で通常ガード時に通るダメージの割合（切り捨て）
+  CONTACT: 1.35,         // 攻撃が届く距離（段）
+  GRAB_RANGE: 1.5,       // つかみ・押しが届く距離（段）
+  THROW_DROP: [16, 24],  // 投げ飛ばされて階段を転げ落ちる段数
+  THROW_FLY: 0.55,       // 階段へ飛ばされる時間（秒）
+  TUMBLE_SPEED: 12,      // 階段を転げ落ちる速さ（段/秒）
+  STUN: 1.5,             // 転げ落ちてから起き上がるまで（秒）
+  CLIMB_TIME: 1.0,       // 手すり乗り越えモーションの時間（秒）
+  PLAYER_HP: 10,         // 「右側で立ち止まる」のHP（0で投げ飛ばされて終了）
+  STAND_START: 8,        // 「右側で立ち止まる」の開始位置（段）
+  POWER_UP_SEC: 15,      // 何秒ごとに登ってくる人の殴りが強くなるか
+  POWER_UP_DMG: 1,       // 1段階ごとのダメージ増加量
+  STAND_DOWN_SPEED: 2.8  // 下の段へ降りる速度（段/秒）
+};
+const BLOCKER_TYPES = [
+  { name: '仁王立ち学生', hp: 4, windup: 0.5, idle: [0.4, 0.9], color: 0x2f5fbf, w: 1.0, drop: 1.0, acc: 'backpack', weight: 35 },
+  { name: '仁王立ち会社員', hp: 6, windup: 0.7, idle: [0.6, 1.1], color: 0x4b525e, w: 1.1, drop: 1.0, acc: 'bag', weight: 45 },
+  { name: '仁王立ち重量級', hp: 10, windup: 0.95, idle: [0.8, 1.4], color: 0x9a3d2c, w: 1.45, drop: 1.4, acc: null, heavy: true }
+];
+const NORMAL_BLOCKERS = BLOCKER_TYPES.filter(t => !t.heavy);
+const HEAVY = BLOCKER_TYPES.find(t => t.heavy);
+const WALKER_TYPES = [
+  { name: '急ぐ学生', hp: 3, windup: 0.5, idle: [0.35, 0.8], color: 0x3a7d44, w: 1.0, dmg: 2, acc: 'backpack', weight: 40 },
+  { name: '急ぐ会社員', hp: 4, windup: 0.6, idle: [0.4, 0.9], color: 0x3d4a5c, w: 1.05, dmg: 2, acc: 'bag', weight: 40 },
+  { name: '急ぐ体育会系', hp: 6, windup: 0.55, idle: [0.4, 0.9], color: 0xb8860b, w: 1.3, dmg: 3, acc: null, weight: 20 }
+];
+// 称号（ランキングの順位で付与）と、Xの投稿に順位を載せる範囲（上位 SHARE_RANK 位まで）
+const SHARE_RANK = 50;
+const TIERS = [
+  { key: 'gold', max: 10, icon: '🏆' },
+  { key: 'silver', max: 25, icon: '🥈' }
+];
+const TITLES = {
+  walk: { gold: 'エスカレーター歩行マスター', silver: 'エスカレーター歩行準マスター' },
+  stand: { gold: 'エスカレーター歩行ブロックマスター', silver: 'エスカレーター歩行ブロック準マスター' }
+};
+const tierOf = rank => TIERS.find(t => rank >= 1 && rank <= t.max) || null;
+const STATION = '永畑町駅';
+// 側面の広告：poster.png → 広告募集 → 下の6枠 の順に並び、300段の間に2周します
+// 広告主が決まったら、画像を index.html と同じ場所に置いて image にファイル名を書くと差し替わります（縦横比 1:1.41 推奨）
+const AD_SLOTS = [
+  { top: 'エスカレーターは', main: '立ち止まって', color: '#1f6fd1', image: '' },
+  { top: '急ぐ方は', main: '階段をご利用ください', color: '#2b8a3e', image: '' },
+  { top: '英会話なら', main: 'えすかれ英語', color: '#c2410c', image: '' },
+  { top: '転職するなら', main: '今。', color: '#6d28d9', image: '' },
+  { top: '手すりに', main: 'おつかまりください', color: '#be123c', image: '' },
+  { top: '歩かない', main: 'それが新常識', color: '#0f766e', image: '' }
+];
+// オンラインランキング（Supabase）
+// 「Project URL」と「Publishable key（sb_publishable_ で始まるキー）」を貼り付ける
+// ※ secret key（sb_secret_ で始まるキー）や service_role キーは絶対に貼らないこと
+// 空欄のままだと端末内ランキングで動作（名前の重複チェックはオンライン時のみ）
+const RANKING = {
+  SUPABASE_URL: '',
+  SUPABASE_KEY: ''
+};
+
+// ===== ユーティリティ =====
+const $ = s => document.querySelector(s);
+const rand = (a, b) => a + Math.random() * (b - a);
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const lerp = (a, b, t) => a + (b - a) * t;
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+const weighted = arr => {
+  let r = Math.random() * arr.reduce((s, t) => s + t.weight, 0);
+  for (const t of arr) if ((r -= t.weight) < 0) return t;
+  return arr[0];
+};
+const escHTML = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+};
+// ユーザー名の整形（全角英数→半角などに統一し、12文字まで）と、重複判定用のキー
+const cleanName = s => Array.from(String(s || '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, '').trim()).slice(0, 12).join('').trim();
+const nameKey = s => cleanName(s).toLowerCase();
+const FONT = 'system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", sans-serif';
+
+// ===== サウンド =====
+let AC = null, muted = false;
+function unlockAudio() {
+  try {
+    if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+    if (AC.state === 'suspended') AC.resume();
+  } catch (e) {}
+}
+function sfx(f, d = 0.08, type = 'square', vol = 0.05, slide = 0) {
+  if (muted || !AC || (S && S.demo)) return;
+  try {
+    const t = AC.currentTime, o = AC.createOscillator(), g = AC.createGain();
+    o.type = type;
+    o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + d);
+    g.gain.setValueAtTime(vol, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g);
+    g.connect(AC.destination);
+    o.start(t);
+    o.stop(t + d + 0.02);
+  } catch (e) {}
+}
+
+// ===== 3D基本 =====
+const D = 0.4, R = 0.23, SLOPE = Math.atan2(R, D), SL = Math.hypot(D, R);
+const LANE_X = { L: -0.3, R: 0.3, S: 1.8 };
+const wp = (x, ys, h = 0) => new THREE.Vector3(x, ys * R + h, -ys * D);
+const wpc = (x, ys, h = 0) => new THREE.Vector3(x, clamp(ys, 0, CFG.STEPS) * R + h, -ys * D);
+const BODIES = [0x6b7a8f, 0x8f6b6b, 0x6b8f7a, 0x7a6b8f, 0x8f866b, 0x5d6d7e, 0xa0826d, 0x6d8fa0, 0x444444, 0xd0d0d0];
+const HAIRS = [0x1d1a17, 0x2b2118, 0x3d2c1e, 0x4a4a4a, 0x5a3b22, 0x141414, 0x8a7b6a];
+const PACKS = [0x1f4e8c, 0xc0392b, 0x222222, 0x2e7d32, 0x6d4c41];
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas: $('#gl'), antialias: true });
+} catch (e) {
+  window.__ok = true;
+  $('#loading').textContent = 'この端末・ブラウザは3D表示（WebGL）に対応していないため、遊べません。';
+  throw e;
+}
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0d1116);
+scene.fog = new THREE.Fog(0x0d1116, 8, 38);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 45);
+scene.add(new THREE.HemisphereLight(0xe8f0ff, 0x404040, 2.2));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2);
+sun.position.set(-2, 10, 4);
+scene.add(sun);
+const hud = $('#hud'), hctx = hud.getContext('2d');
+const fadeEl = $('#fade');
+let VW = 1, VH = 1, DPR = 1, SAT = 0, SAB = 0;
+const m4 = new THREE.Matrix4();
+
+// ===== テクスチャ =====
+function canvasTex(w, h, draw, rx = 1, ry = 1) {
+  const c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 4;
+  if (rx !== 1 || ry !== 1) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(rx, ry); }
+  return t;
+}
+function fitText(g, text, x, y, maxW, size) {
+  let s = size;
+  do { g.font = `bold ${s}px sans-serif`; s -= 2; } while (g.measureText(text).width > maxW && s > 10);
+  g.fillText(text, x, y);
+}
+function rrect(g, x, y, w, h, r) {
+  g.beginPath();
+  g.moveTo(x + r, y);
+  g.arcTo(x + w, y, x + w, y + h, r);
+  g.arcTo(x + w, y + h, x, y + h, r);
+  g.arcTo(x, y + h, x, y, r);
+  g.arcTo(x, y, x + w, y, r);
+  g.closePath();
+}
+const tileBase = canvasTex(256, 640, (g, w, h) => {
+  g.fillStyle = '#ddd8cb'; g.fillRect(0, 0, w, h);
+  g.strokeStyle = '#a9a294'; g.lineWidth = 3;
+  for (let i = 0; i <= 4; i++) { g.beginPath(); g.moveTo(i * 64, 0); g.lineTo(i * 64, h); g.stroke(); }
+  for (let j = 0; j <= 10; j++) { g.beginPath(); g.moveTo(0, j * 64); g.lineTo(w, j * 64); g.stroke(); }
+  g.fillStyle = '#2e6db4'; g.fillRect(0, 294, w, 26);
+});
+function tileMat(w, h) {
+  const t = tileBase.clone();
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(w / 2, h / 4.8);
+  t.needsUpdate = true;
+  return new THREE.MeshLambertMaterial({ map: t });
+}
+const lam = c => new THREE.MeshLambertMaterial({ color: c });
+// poster.png を読み込めないときの代替ポスター
+function drawPosterFallback(g, w, h) {
+  g.fillStyle = '#ffe600'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#6e6e6e'; rrect(g, w * 0.08, h * 0.05, w * 0.84, h * 0.7, 36); g.fill();
+  g.fillStyle = '#ffe600'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  fitText(g, '乗ったら', w / 2, h * 0.12, w * 0.5, 56);
+  fitText(g, 'とまる', w / 2, h * 0.27, w * 0.72, 150);
+  for (const dx of [-0.12, 0.12]) {
+    const x = w * (0.5 + dx);
+    g.beginPath(); g.arc(x, h * 0.45, w * 0.065, 0, Math.PI * 2); g.fill();
+    rrect(g, x - w * 0.1, h * 0.52, w * 0.2, h * 0.2, 20); g.fill();
+  }
+  g.fillStyle = '#555';
+  fitText(g, 'エスカレーターでは、1列でも2列でも', w / 2, h * 0.82, w * 0.86, 32);
+  fitText(g, '歩かず立ち止まりましょう。', w / 2, h * 0.9, w * 0.86, 44);
+}
+// 広告募集の広告
+function drawRecruitAd(g, w, h) {
+  g.fillStyle = '#fffdf2'; g.fillRect(0, 0, w, h);
+  g.fillStyle = '#e53935'; g.fillRect(0, 0, w, h * 0.15);
+  g.strokeStyle = '#e53935'; g.lineWidth = 16; g.strokeRect(8, 8, w - 16, h - 16);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillStyle = '#fff';
+  fitText(g, 'AD SPACE', w / 2, h * 0.08, w - 100, 54);
+  g.fillStyle = '#e53935';
+  fitText(g, '広告募集中！', w / 2, h * 0.3, w - 60, 90);
+  g.fillStyle = '#333';
+  fitText(g, 'この場所に', w / 2, h * 0.45, w - 100, 44);
+  fitText(g, 'あなたの広告を', w / 2, h * 0.53, w - 100, 44);
+  g.fillStyle = '#ffd84d';
+  rrect(g, w * 0.1, h * 0.63, w * 0.8, h * 0.22, 28); g.fill();
+  g.fillStyle = '#111';
+  fitText(g, '載せて欲しい方は', w / 2, h * 0.69, w * 0.7, 42);
+  fitText(g, 'DMまで！', w / 2, h * 0.79, w * 0.7, 72);
+  g.fillStyle = '#888';
+  fitText(g, STATION, w / 2, h * 0.93, w - 160, 30);
+}
+const textAd = a => (g, w, h) => {
+  g.fillStyle = '#f4f4f4'; g.fillRect(0, 0, w, h);
+  g.fillStyle = a.color; g.fillRect(0, 0, w, h * 0.62);
+  g.fillStyle = '#fff'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  fitText(g, a.top, w / 2, h * 0.22, w - 60, 68);
+  fitText(g, a.main, w / 2, h * 0.42, w - 48, 80);
+  g.fillStyle = a.color;
+  fitText(g, STATION, w / 2, h * 0.8, w - 80, 52);
+};
+// 画像があれば画像、読み込めなければ代替デザインを表示する広告
+function imageMaterial(src, fallback) {
+  const c = document.createElement('canvas');
+  c.width = 512; c.height = 724;
+  const g = c.getContext('2d');
+  fallback(g, c.width, c.height);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  if (src) {
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const t = document.createElement('canvas').getContext('2d');
+        t.drawImage(img, 0, 0, 2, 2);
+        t.getImageData(0, 0, 1, 1);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        tex.needsUpdate = true;
+      } catch (e) {}
+    };
+    img.src = src;
+  }
+  return new THREE.MeshBasicMaterial({ map: tex });
+}
+
+// ===== トンネル（エスカレーター部分） =====
+let escSteps;
+const HALL_H = 4.5, LOW_H = 3.8;
+function buildWorld() {
+  const N = CFG.STEPS, sn = Math.sin(SLOPE), cs = Math.cos(SLOPE);
+  const sTop = N * SL + (HALL_H - 3.3 * cs) / sn + 0.3;
+  const sC0 = (LOW_H - 3.3 * cs) / sn, sW0 = -1.5;
+  const slope = new THREE.Group();
+  slope.rotation.x = SLOPE;
+  scene.add(slope);
+  const wLen = sTop - sW0, wMid = -(sTop + sW0) / 2, wallMat = tileMat(wLen, 4.8);
+  for (const [x, ry] of [[-1.35, Math.PI / 2], [2.75, -Math.PI / 2]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(wLen, 4.8), wallMat);
+    m.rotation.y = ry; m.position.set(x, 0.9, wMid); slope.add(m);
+  }
+  const cLen = sTop - sC0, cMid = -(sTop + sC0) / 2;
+  const ceilMat = lam(0x3a3f47);
+  const ceil = new THREE.Mesh(new THREE.PlaneGeometry(4.2, cLen), ceilMat);
+  ceil.rotation.x = Math.PI / 2; ceil.position.set(0.7, 3.3, cMid); slope.add(ceil);
+  const nL = 2 * Math.ceil(cLen / 3) + 4;
+  const lights = new THREE.InstancedMesh(new THREE.BoxGeometry(0.18, 0.05, 1.4), new THREE.MeshBasicMaterial({ color: 0xf2f8ff }), nL);
+  let li = 0;
+  for (let s = sC0 + 1.5; s < sTop - 1 && li < nL - 2; s += 3) {
+    for (const x of [0, 1.8]) { m4.makeTranslation(x, 3.27, -s); lights.setMatrixAt(li++, m4); }
+  }
+  lights.count = li;
+  lights.frustumCulled = false;
+  slope.add(lights);
+  const steel = lam(0x9aa3ad), black = lam(0x111111);
+  const glass = new THREE.MeshLambertMaterial({ color: 0x9fc4d8, transparent: true, opacity: 0.25 });
+  const EL = N * SL + 2, eMid = -(N * SL) / 2;
+  const box = (w, h, m, x, y) => {
+    const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, EL), m);
+    o.position.set(x, y, eMid);
+    slope.add(o);
+  };
+  for (const s of [-1, 1]) {
+    box(0.04, 0.85, glass, s * 0.66, 0.55);
+    box(0.09, 0.06, black, s * 0.66, 1.0);
+    box(0.06, 0.35, steel, s * 0.62, 0.05);
+  }
+  box(0.25, 1.0, steel, 0.95, 0.5);
+  box(0.06, 0.06, steel, 2.6, 0.95);
+  // 側面の広告：ポスター → 広告募集 → 6枠 を2周
+  const adMats = [
+    imageMaterial('poster.png', drawPosterFallback),
+    imageMaterial('', drawRecruitAd),
+    ...AD_SLOTS.map(a => imageMaterial(a.image, textAd(a)))
+  ];
+  const adGeo = new THREE.PlaneGeometry(1.1, 1.55);
+  const nAds = adMats.length * 2, adGap = (N * SL - 8) / (nAds - 1);
+  for (let i = 0; i < nAds; i++) {
+    const m = new THREE.Mesh(adGeo, adMats[i % adMats.length]);
+    m.rotation.y = Math.PI / 2; m.position.set(-1.33, 1.6, -(4 + i * adGap)); slope.add(m);
+  }
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.5), new THREE.MeshBasicMaterial({ map: canvasTex(512, 128, (g, w, h) => {
+    g.fillStyle = '#f6c90e'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#111'; g.textBaseline = 'middle';
+    fitText(g, '改札口 ↑  Ticket Gates', 24, h / 2, w - 40, 60);
+  }) }));
+  sign.position.copy(wp(0.6, N - 5, 2.9));
+  scene.add(sign);
+  const f1 = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 14), lam(0x5a5d63));
+  f1.rotation.x = -Math.PI / 2; f1.position.set(0.7, 0, 7); scene.add(f1);
+  const c1 = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 14), ceilMat);
+  c1.rotation.x = Math.PI / 2; c1.position.set(0.7, LOW_H, 7); scene.add(c1);
+  const lowWall = tileMat(14, LOW_H);
+  for (const [x, ry] of [[-1.37, Math.PI / 2], [2.77, -Math.PI / 2]]) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(14, LOW_H), lowWall);
+    m.rotation.y = ry; m.position.set(x, LOW_H / 2, 7); scene.add(m);
+  }
+  const riser = lam(0x2c3036);
+  const escTread = new THREE.MeshLambertMaterial({ map: canvasTex(256, 96, (g, w, h) => {
+    g.fillStyle = '#5c616a'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#474b53'; for (let x = 6; x < w; x += 8) g.fillRect(x, 0, 3, h);
+    g.fillStyle = '#f2c230'; g.fillRect(0, h - 10, w, 10); g.fillRect(0, 0, 10, h); g.fillRect(w - 10, 0, 10, h);
+  }) });
+  escSteps = new THREE.InstancedMesh(new THREE.BoxGeometry(1.2, R, D), [riser, riser, escTread, riser, riser, riser], N + 2);
+  escSteps.frustumCulled = false;
+  scene.add(escSteps);
+  const stRiser = lam(0x8d8f94);
+  const stTread = new THREE.MeshLambertMaterial({ map: canvasTex(256, 96, (g, w, h) => {
+    g.fillStyle = '#a7a9ad'; g.fillRect(0, 0, w, h);
+    g.fillStyle = '#c9a227'; g.fillRect(0, h - 12, w, 12);
+  }) });
+  const stairs = new THREE.InstancedMesh(new THREE.BoxGeometry(1.6, R, D), [stRiser, stRiser, stTread, stRiser, stRiser, stRiser], N + 1);
+  for (let i = 0; i <= N; i++) {
+    m4.makeTranslation(LANE_X.S, i * R - R / 2 - (i === N ? 0.005 : 0), -(i + 0.5) * D);
+    stairs.setMatrixAt(i, m4);
+  }
+  stairs.frustumCulled = false;
+  scene.add(stairs);
+  buildTop(ceilMat);
+}
+
+// ===== 上階（改札フロア） =====
+function buildTop(ceilMat) {
+  const N = CFG.STEPS, yT = N * R, zT = -N * D, sn = Math.sin(SLOPE), cs = Math.cos(SLOPE);
+  const fz = 3.3 * sn - (N * SL + (HALL_H - 3.3 * cs) / sn) * cs;
+  const X0 = -6, X1 = 8, gz = zT - 7, bz = zT - 17;
+  const Wd = X1 - X0, cx = (X0 + X1) / 2, Dp = fz - bz;
+  const add = (geo, m, x, y, z, rx = 0, ry = 0) => {
+    const o = new THREE.Mesh(geo, m);
+    o.position.set(x, y, z);
+    o.rotation.set(rx, ry, 0);
+    scene.add(o);
+    return o;
+  };
+  const addSign = (w, h, x, y, z, bg, fg, text) => {
+    const pw = Math.round(w * 160), ph = Math.round(h * 160);
+    add(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: canvasTex(pw, ph, g => {
+      g.fillStyle = bg; g.fillRect(0, 0, pw, ph);
+      g.fillStyle = fg; g.textAlign = 'center'; g.textBaseline = 'middle';
+      fitText(g, text, pw / 2, ph / 2, pw - 24, Math.round(ph * 0.6));
+    }) }), x, y, z);
+  };
+  const fTex = canvasTex(128, 128, g => {
+    g.fillStyle = '#c9cccf'; g.fillRect(0, 0, 128, 128);
+    g.strokeStyle = '#a5a9ad'; g.lineWidth = 3; g.strokeRect(0, 0, 128, 128);
+  }, Wd / 1.2, (zT - bz) / 1.2);
+  add(new THREE.PlaneGeometry(Wd, zT - bz), new THREE.MeshLambertMaterial({ map: fTex }), cx, yT + 0.01, (zT + bz) / 2, -Math.PI / 2);
+  add(new THREE.PlaneGeometry(Wd, Dp), ceilMat, cx, yT + HALL_H, (fz + bz) / 2, Math.PI / 2);
+  const sideMat = tileMat(Dp, HALL_H);
+  add(new THREE.PlaneGeometry(Dp, HALL_H), sideMat, X0, yT + HALL_H / 2, (fz + bz) / 2, 0, Math.PI / 2);
+  add(new THREE.PlaneGeometry(Dp, HALL_H), sideMat, X1, yT + HALL_H / 2, (fz + bz) / 2, 0, -Math.PI / 2);
+  add(new THREE.PlaneGeometry(Wd, HALL_H), tileMat(Wd, HALL_H), cx, yT + HALL_H / 2, bz);
+  const lw = -1.35 - X0, rw = X1 - 2.75;
+  add(new THREE.PlaneGeometry(lw, HALL_H), tileMat(lw, HALL_H), X0 + lw / 2, yT + HALL_H / 2, fz, 0, Math.PI);
+  add(new THREE.PlaneGeometry(rw, HALL_H), tileMat(rw, HALL_H), 2.75 + rw / 2, yT + HALL_H / 2, fz, 0, Math.PI);
+  const lg = new THREE.BoxGeometry(1.4, 0.05, 0.18), lm = new THREE.MeshBasicMaterial({ color: 0xf2f8ff });
+  for (let z = fz - 1.5; z > bz + 1; z -= 3) {
+    for (const x of [-3, 0.6, 4.2]) add(lg, lm, x, yT + HALL_H - 0.03, z);
+  }
+  add(new THREE.BoxGeometry(1.2, 0.02, 0.6), lam(0xb0b6bd), 0, yT + 0.015, zT - 0.3);
+  add(new THREE.BoxGeometry(0.3, 0.012, (zT - gz) - 1.6), lam(0xf2c230), LANE_X.R, yT + 0.016, (zT + gz) / 2);
+  const cabG = new THREE.BoxGeometry(0.22, 1.0, 1.3), cabM = lam(0xd5d9de);
+  const topG = new THREE.BoxGeometry(0.26, 0.04, 0.55), topM = lam(0x1f6fd1);
+  const ledG = new THREE.BoxGeometry(0.1, 0.06, 0.02), ledM = new THREE.MeshBasicMaterial({ color: 0x00e676 });
+  for (let x = -4.5; x <= 6.4; x += 0.9) {
+    add(cabG, cabM, x, yT + 0.5, gz);
+    add(topG, topM, x, yT + 1.02, gz + 0.25);
+    add(ledG, ledM, x, yT + 0.85, gz + 0.66);
+  }
+  addSign(3.2, 0.6, 0.6, yT + 3.3, gz + 0.3, '#1b1b1b', '#ffffff', '改札  Ticket Gates');
+  addSign(1.8, 0.5, -3.6, yT + 3.3, gz + 0.3, '#f6c90e', '#111111', '出口  Exit ↗');
+  addSign(5.0, 0.9, cx, yT + 2.8, bz + 0.02, '#ffffff', '#1f3b70', STATION);
+}
+function updateSteps() {
+  const off = S.esc % 1;
+  for (let i = 0; i < CFG.STEPS + 2; i++) {
+    const ys = i - 1 + off;
+    if (ys < 0 || ys > CFG.STEPS) m4.makeScale(0, 0, 0);
+    else m4.makeTranslation(0, ys * R - R / 2, -(ys + 0.5) * D);
+    escSteps.setMatrixAt(i, m4);
+  }
+  escSteps.instanceMatrix.needsUpdate = true;
+}
+
+// ===== 人物 =====
+const GEO = {
+  body: new THREE.CapsuleGeometry(0.2, 0.45, 4, 8),
+  legs: new THREE.BoxGeometry(0.3, 0.8, 0.2),
+  head: new THREE.SphereGeometry(0.13, 12, 10),
+  hair: new THREE.SphereGeometry(0.14, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.6),
+  arm: new THREE.BoxGeometry(0.09, 0.55, 0.09),
+  eye: new THREE.BoxGeometry(0.03, 0.03, 0.02),
+  bag: new THREE.BoxGeometry(0.32, 0.24, 0.1),
+  pack: new THREE.BoxGeometry(0.36, 0.42, 0.18)
+};
+const matCache = {};
+const mat = c => matCache[c] || (matCache[c] = new THREE.MeshLambertMaterial({ color: c }));
+function makePerson(color, hair, w = 1, acc = null) {
+  const g = new THREE.Group();
+  g.rotation.order = 'YXZ';
+  const legP = new THREE.Group();
+  legP.position.y = 0.8;
+  const legs = new THREE.Mesh(GEO.legs, mat(0x2a2f3a));
+  legs.position.y = -0.4; legs.scale.x = w;
+  legP.add(legs); g.add(legP);
+  const body = new THREE.Mesh(GEO.body, mat(color));
+  body.position.y = 1.1; body.scale.set(w, 1, 0.75); g.add(body);
+  const head = new THREE.Mesh(GEO.head, mat(0xf1c9a5));
+  head.position.y = 1.62; g.add(head);
+  const hm = new THREE.Mesh(GEO.hair, mat(hair));
+  hm.position.set(0, 1.64, 0.015); hm.rotation.x = 0.5; g.add(hm);
+  for (const sx of [-0.045, 0.045]) {
+    const e = new THREE.Mesh(GEO.eye, mat(0x111111));
+    e.position.set(sx, 1.64, -0.125); g.add(e);
+  }
+  const arms = [-1, 1].map(s => {
+    const p = new THREE.Group();
+    p.position.set(s * 0.25 * w, 1.4, 0);
+    const a = new THREE.Mesh(GEO.arm, mat(color));
+    a.position.y = -0.27; p.add(a); g.add(p);
+    return p;
+  });
+  if (acc === 'bag') {
+    const b = new THREE.Mesh(GEO.bag, mat(0x2b1d14));
+    b.position.set(0, -0.66, 0); b.rotation.y = Math.PI / 2;
+    arms[0].add(b);
+  } else if (acc === 'backpack') {
+    const b = new THREE.Mesh(GEO.pack, mat(pick(PACKS)));
+    b.position.set(0, 1.15, 0.2 * Math.max(1, w * 0.9));
+    g.add(b);
+  }
+  g.userData = { legP, arms };
+  scene.add(g);
+  return g;
+}
+// 「右側で立ち止まる」のプレイヤーが着るボディアーマー（見た目のみ。HPは変わらない）
+const ARMOR_GEO = {
+  vest: new THREE.BoxGeometry(0.47, 0.5, 0.36),
+  plate: new THREE.BoxGeometry(0.34, 0.32, 0.05),
+  collar: new THREE.BoxGeometry(0.34, 0.07, 0.3),
+  pouch: new THREE.BoxGeometry(0.1, 0.09, 0.06),
+  pad: new THREE.BoxGeometry(0.16, 0.08, 0.18),
+  patch: new THREE.PlaneGeometry(0.26, 0.1)
+};
+let patchMat = null;
+function addArmor(m) {
+  const add = (geo, color, x, y, z, parent = m) => {
+    const o = new THREE.Mesh(geo, mat(color));
+    o.position.set(x, y, z);
+    parent.add(o);
+  };
+  add(ARMOR_GEO.vest, 0x2c3527, 0, 1.17, 0);
+  add(ARMOR_GEO.plate, 0x3d4935, 0, 1.2, -0.195);
+  add(ARMOR_GEO.plate, 0x3d4935, 0, 1.2, 0.195);
+  add(ARMOR_GEO.collar, 0x22281e, 0, 1.43, 0);
+  for (const x of [-0.12, 0, 0.12]) add(ARMOR_GEO.pouch, 0x4b5841, x, 0.99, -0.2);
+  for (const arm of m.userData.arms) add(ARMOR_GEO.pad, 0x2c3527, 0, -0.02, 0, arm);
+  if (!patchMat) {
+    patchMat = new THREE.MeshBasicMaterial({ map: canvasTex(256, 96, (g, w, h) => {
+      g.fillStyle = '#111'; g.fillRect(0, 0, w, h);
+      g.fillStyle = '#ffe600'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      fitText(g, 'STOP', w / 2, h / 2 + 2, w - 40, 72);
+    }) });
+  }
+  const patch = new THREE.Mesh(ARMOR_GEO.patch, patchMat);
+  patch.position.set(0, 1.27, 0.222);
+  m.add(patch);
+}
+function pose(m, o) {
+  const [aL, aR] = m.userData.arms, legP = m.userData.legP;
+  aL.rotation.set(0, 0, 0); aR.rotation.set(0, 0, 0); legP.rotation.x = 0;
+  m.rotation.x = 0; m.rotation.z = 0; m.scale.y = 1;
+  if (o.walk != null) { aL.rotation.x = Math.sin(o.walk) * 0.6; aR.rotation.x = -Math.sin(o.walk) * 0.6; }
+  if (o.akimbo) { aL.rotation.z = -0.7; aR.rotation.z = 0.7; }
+  if (o.reach) { aL.rotation.x = 1.3; aR.rotation.x = 1.3; }
+  if (o.phone) aR.rotation.x = 1.0;
+  if (o.guard) { aL.rotation.set(2.3, 0, 0.35); aR.rotation.set(2.3, 0, -0.35); }
+  if (o.punch) aR.rotation.set(1.55, 0, 0);
+  if (o.stagger) m.rotation.z = Math.sin(S.t * 30) * 0.15;
+}
+// 階段⇄エスカレーターの手すり乗り越えモーション
+function climbPose(p) {
+  const m = p.mesh, u = m.userData, [aL, aR] = u.arms, k = clamp(p.st / p.vt, 0, 1);
+  m.rotation.y = p.climbDir < 0 ? Math.PI / 2 : -Math.PI / 2;
+  if (k < 0.25) {
+    const q = k / 0.25;
+    aL.rotation.x = aR.rotation.x = 2.4 * q;
+    m.rotation.x = -0.2 * q;
+  } else if (k < 0.7) {
+    const q = (k - 0.25) / 0.45;
+    aL.rotation.x = aR.rotation.x = lerp(2.4, 0.4, q);
+    aL.rotation.z = -0.5 * q; aR.rotation.z = 0.5 * q;
+    u.legP.rotation.x = Math.sin(Math.PI * q) * 1.6;
+    m.rotation.x = -0.35;
+    m.rotation.z = Math.sin(Math.PI * q) * 0.3;
+  } else {
+    const q = (k - 0.7) / 0.3;
+    aL.rotation.z = -0.9 * (1 - q); aR.rotation.z = 0.9 * (1 - q);
+    m.scale.y = 1 - Math.sin(Math.PI * q) * 0.15;
+  }
+}
+function footY(lane, ys) {
+  if (lane === 'S') return clamp(Math.floor(ys), 0, CFG.STEPS) * R;
+  const off = S.esc % 1;
+  return clamp(Math.floor(ys - off) + off, 0, CFG.STEPS) * R;
+}
+
+// ===== 状態 =====
+let S = null, playerName = store.get('esc3d_name') || '';
+const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
+function clearState() {
+  if (!S) return;
+  for (const e of [...S.standers, ...S.foes, ...S.bodies]) scene.remove(e.mesh);
+  scene.remove(S.player.mesh);
+}
+function makeState(mode) {
+  clearState();
+  S = {
+    mode, demo: false, phase: 'count', count: 3, lastCount: 4, t: 0, esc: 0, shake: 0, over: false,
+    standers: [], foes: [], bodies: [], pops: [], spawnPts: [], spawnIdx: 0, wT: 1.5, nextBoard: 2,
+    stats: { punch: 0, oust: 0, block: 0, thrown: 0, jg: 0 }, finishT: 0, final: 0, shown: false, snap: true,
+    player: {
+      lane: 'R', y: mode === 'stand' ? CFG.STAND_START : 0, x: LANE_X.R, h: 0, state: 'normal', st: 0,
+      punchCd: 0, armT: 0, guard: false, guardT: 0, face: mode === 'stand' ? Math.PI : 0, walking: false,
+      hp: CFG.PLAYER_HP, fx: 0, tx: 0, fy: 0, my: 0, ty: 0, h0: 0, toLane: 'R', vt: 1, climbDir: 0,
+      tumbleT: 0.3, roll: 0, rollTotal: 0, mesh: null
+    }
+  };
+  const p = S.player;
+  p.mesh = makePerson(0xff8a3d, 0x3a2614);
+  if (mode === 'stand') addArmor(p.mesh);
+  p.h = footY('R', p.y);
+  const n = CFG.BLOCKERS, last = CFG.STEPS - 22;
+  for (let i = 0; i < n; i++) S.spawnPts.push(clamp(3 + i * ((last - 3) / Math.max(1, n - 1)) + rand(-2, 2), 1, last));
+  S.spawnPts.sort((a, b) => a - b);
+  for (let y = 0.5; y < CFG.STEPS - 0.5; y += 1 + Math.floor(rand(1, 3))) addStander(y);
+}
+function addStander(y) {
+  const r = Math.random(), acc = r < 0.25 ? 'bag' : r < 0.45 ? 'backpack' : null;
+  S.standers.push({ y, phone: !acc && Math.random() < 0.5, mesh: makePerson(pick(BODIES), pick(HAIRS), 1, acc) });
+}
+function startGame(mode) {
+  makeState(mode);
+  $('#title').classList.remove('show');
+  $('#result').classList.remove('show');
+  fadeEl.style.transition = 'none';
+  fadeEl.style.opacity = '0';
+  if (document.activeElement) document.activeElement.blur();
+  unlockAudio();
+}
+function startDemo() {
+  makeState('stand');
+  S.demo = true; S.phase = 'run';
+  S.player.mesh.visible = false;
+}
+function showTitle() {
+  $('#result').classList.remove('show');
+  $('#title').classList.add('show');
+  $('#name').value = playerName;
+  $('#nameMsg').textContent = '';
+  startDemo();
+}
+function pop(pos, text, color = '#fff', life = 0.9, size = 18) {
+  S.pops.push({ pos: pos.clone().add(new THREE.Vector3(0, 2.1, 0)), text, color, t: 0, life, size });
+}
+
+// ===== 敵（仁王立ち／登ってくる人） =====
+function addFoe(kind, y, type) {
+  type = type || weighted(kind === 'blocker' ? NORMAL_BLOCKERS : WALKER_TYPES);
+  const f = {
+    kind, type, dir: kind === 'blocker' ? 1 : -1, y, x: kind === 'blocker' ? LANE_X.L : LANE_X.R,
+    hp: type.hp, alive: true, ousted: false, state: kind === 'blocker' ? 'enter' : 'walk',
+    st: 0, next: 1, recT: 0, stagT: 0.7, shakeT: 0, speed: rand(2.3, 3.0),
+    mesh: makePerson(type.color, pick(HAIRS), type.w, type.acc)
+  };
+  f.mesh.position.set(f.x, footY('R', y), -y * D);
+  S.foes.push(f);
+  return f;
+}
+function spawnBlocker(y, type) {
+  if (S.foes.some(f => f.alive && Math.abs(f.y - y) < 3.5)) y += 4;
+  let idx = -1, bd = 2.5;
+  S.standers.forEach((s, i) => { const d = Math.abs(s.y - y); if (d < bd) { bd = d; idx = i; } });
+  if (idx >= 0) y = S.standers[idx].y;
+  if (y > CFG.STEPS - 4 || y < 1) return;
+  if (idx >= 0) { scene.remove(S.standers[idx].mesh); S.standers.splice(idx, 1); }
+  const f = addFoe('blocker', y, type);
+  pop(f.mesh.position, '仁王立ち！', '#ff9f43', 1.1, 16);
+}
+function setIdle(f) { f.state = 'idle'; f.st = 0; f.next = rand(...f.type.idle); }
+function facingFoe() {
+  const p = S.player;
+  let best = null, bg = 1e9;
+  for (const f of S.foes) {
+    if (!f.alive || f.state === 'enter') continue;
+    const g = f.dir * (f.y - p.y);
+    if (g > -0.01 && g < bg) { bg = g; best = f; }
+  }
+  return best;
+}
+function playerActive() {
+  const p = S.player;
+  return !S.demo && p.lane === 'R' && p.state !== 'thrown' && p.state !== 'vault';
+}
+function contactFoe() {
+  if (!playerActive()) return null;
+  const f = facingFoe();
+  return f && f.dir * (f.y - S.player.y) <= CFG.CONTACT ? f : null;
+}
+function foeAhead(y) {
+  let best = null;
+  for (const f of S.foes) {
+    if (f.alive && f.state !== 'enter' && f.dir === 1 && f.y > y && (!best || f.y < best.y)) best = f;
+  }
+  return best;
+}
+const powerLv = () => S.mode === 'stand' ? Math.floor(S.t / CFG.POWER_UP_SEC) : 0;
+function hitFoe(f) {
+  const weak = f.state === 'recover' || f.state === 'stagger';
+  f.hp -= CFG.PUNCH_DMG * (weak ? CFG.WEAK_MULT : 1);
+  f.shakeT = 0.2;
+  pop(f.mesh.position, weak ? 'ドゴッ!!' : 'ボコッ', weak ? '#ffd84d' : '#fff');
+  S.shake = weak ? 6 : 3;
+  sfx(weak ? 160 : 220, 0.08, 'square', 0.06, -60);
+  if (f.hp <= 0) oust(f);
+}
+function oust(f) {
+  f.alive = false; f.ousted = true;
+  S.bodies.push({ mesh: f.mesh, x0: f.x, y0: f.y, x1: rand(1.4, 2.3), y1: Math.max(0.5, f.y - rand(2, 5)), h0: f.mesh.position.y, t: 0, dur: 0.6, life: 2.2 });
+  if (f.kind === 'blocker') { S.stats.oust++; pop(f.mesh.position, 'どかした！', '#ffd84d', 1.2, 22); }
+  else { S.stats.block++; pop(f.mesh.position, '妨害成功！', '#ffd84d', 1.2, 22); }
+  sfx(90, 0.3, 'sawtooth', 0.06, -40);
+}
+function hurtPlayer(f) {
+  const p = S.player;
+  const dmg = (f.type.dmg || 1) + powerLv() * CFG.POWER_UP_DMG;
+  if (p.guard) {
+    if (p.guardT <= CFG.JUST_GUARD) {
+      f.state = 'stagger'; f.stagT = CFG.JUST_STAGGER; f.st = 0;
+      S.stats.jg++;
+      pop(p.mesh.position, 'ジャストガード！', '#7CFC9A', 1.0, 22);
+      sfx(1200, 0.12, 'triangle', 0.06, 400);
+      return;
+    }
+    const chip = S.mode === 'stand' ? Math.floor(dmg * CFG.GUARD_CHIP) : 0;
+    pop(p.mesh.position, chip ? `ガード！ -${chip}` : 'ガード！', '#9fd3ff', 0.8, 18);
+    sfx(500, 0.08, 'triangle', 0.05);
+    if (chip) { p.hp -= chip; if (p.hp <= 0) throwPlayer(0.8); }
+    return;
+  }
+  if (S.mode === 'walk') { throwPlayer(f.type.drop || 1); return; }
+  p.hp -= dmg;
+  S.shake = 10;
+  pop(p.mesh.position, `ドンッ！ -${dmg}`, '#ff6b6b', 0.8, 20);
+  sfx(160, 0.12, 'square', 0.06, -60);
+  if (p.hp <= 0) throwPlayer(0.8);
+}
+// 階段へ投げ飛ばされ → 転げ落ちる → 起き上がる
+function throwPlayer(mul) {
+  const p = S.player;
+  const drop = rand(CFG.THROW_DROP[0], CFG.THROW_DROP[1]) * mul;
+  p.state = 'thrown'; p.st = 0; p.guard = false;
+  p.fx = p.x; p.tx = LANE_X.S;
+  p.fy = p.y; p.my = Math.max(0, p.y - 2); p.ty = Math.max(0, p.y - drop);
+  p.h0 = p.h; p.roll = 0;
+  p.tumbleT = Math.max(0.3, (p.my - p.ty) / CFG.TUMBLE_SPEED);
+  p.rollTotal = Math.max(1, Math.round((p.my - p.ty) * 0.8 / (Math.PI * 2))) * Math.PI * 2;
+  S.stats.thrown++;
+  pop(p.mesh.position, S.mode === 'stand' ? '投げ飛ばされた！' : '階段へポイッ！', '#ff6b6b', 1.3, 24);
+  S.shake = 14;
+  sfx(400, 0.45, 'sawtooth', 0.06, -320);
+}
+function updateFoes(dt) {
+  const E = CFG.ESC_SPEED, p = S.player;
+  for (const f of S.foes) {
+    if (!f.alive) continue;
+    f.st += dt; f.shakeT -= dt;
+    if (f.state === 'enter') {
+      f.y += E * dt;
+      const k = Math.min(1, f.st / 0.45);
+      f.x = lerp(LANE_X.L, LANE_X.R, easeOut(k));
+      if (k >= 1) setIdle(f);
+      continue;
+    }
+    const engaged = playerActive() && facingFoe() === f && f.dir * (f.y - p.y) < 3;
+    const gap = engaged ? f.dir * (f.y - p.y) : 99;
+    if (f.kind === 'walker') {
+      let ny = f.y + (E + f.speed) * dt;
+      if (playerActive() && p.y > f.y) ny = Math.min(ny, p.y - 1);
+      for (const o of S.foes) if (o !== f && o.alive && o.y > f.y) ny = Math.min(ny, o.y - CFG.WALKER_GAP);
+      f.y = Math.max(f.y, ny);
+      if (f.state === 'walk') { if (engaged && gap <= 1.05) setIdle(f); continue; }
+      if (!engaged) { f.state = 'walk'; continue; }
+    } else {
+      f.y += E * dt;
+    }
+    if (f.state === 'idle') {
+      if (gap <= CFG.CONTACT + 0.25) {
+        if (f.st >= f.next) { f.state = 'windup'; f.st = 0; sfx(880, 0.08, 'square', 0.04); }
+      } else {
+        f.st = Math.min(f.st, f.next * 0.5);
+      }
+    } else if (f.state === 'windup') {
+      if (f.st >= f.type.windup) {
+        f.st = 0;
+        if (gap <= CFG.GRAB_RANGE) { f.state = 'recover'; f.recT = 0.6; hurtPlayer(f); }
+        else { f.state = 'recover'; f.recT = 1.0; pop(f.mesh.position, 'スカッ → スキ！', '#7CFC9A', 1, 18); }
+      }
+    } else if (f.state === 'recover') {
+      if (f.st >= f.recT) setIdle(f);
+    } else if (f.state === 'stagger') {
+      if (f.st >= f.stagT) setIdle(f);
+    }
+  }
+  for (const f of S.foes) {
+    if (f.alive && (f.y >= CFG.STEPS - 0.3 || f.y < p.y - 25)) f.alive = false;
+  }
+  S.foes = S.foes.filter(f => {
+    if (!f.alive && !f.ousted) scene.remove(f.mesh);
+    return f.alive;
+  });
+}
+function spawns(dt) {
+  if (S.mode === 'walk') {
+    while (S.spawnIdx < S.spawnPts.length && S.player.y >= S.spawnPts[S.spawnIdx]) {
+      const lastOne = S.spawnIdx === S.spawnPts.length - 1;
+      spawnBlocker(Math.max(0, S.player.y) + rand(6, 9), lastOne ? HEAVY : null);
+      S.spawnIdx++;
+    }
+    return;
+  }
+  S.wT -= dt;
+  if (S.wT <= 0) {
+    S.wT = rand(...CFG.WALKER_INTERVAL) * Math.max(CFG.WALKER_INTERVAL_MIN, 1 - S.t / 400);
+    const y = Math.max(0, S.player.y - 9);
+    const nearPlayer = playerActive() && Math.abs(S.player.y - y) < CFG.WALKER_GAP;
+    if (!nearPlayer && !S.foes.some(f => Math.abs(f.y - y) < CFG.WALKER_GAP + 1)) addFoe('walker', y);
+  }
+}
+
+// ===== プレイヤー =====
+function attack() {
+  if (!S || S.demo || S.phase !== 'run') return;
+  const p = S.player;
+  if (p.state !== 'normal' || p.lane !== 'R' || p.guard || p.punchCd > 0) return;
+  p.punchCd = CFG.PUNCH_CD; p.armT = 0.15; S.stats.punch++;
+  const f = contactFoe();
+  if (f) hitFoe(f); else sfx(300, 0.05, 'triangle', 0.03);
+}
+function laneMove(d) {
+  if (!S || S.demo || S.phase !== 'run' || S.mode !== 'walk') return;
+  const p = S.player, order = ['L', 'R', 'S'];
+  if (p.state !== 'normal') return;
+  const target = order[order.indexOf(p.lane) + d];
+  if (!target) return;
+  if (target === 'L') { pop(p.mesh.position, '左は立ち止まる人の列', '#ccc', 0.9, 15); return; }
+  if (target === 'R' && S.foes.some(f => f.alive && Math.abs(f.y - p.y) < 1.5)) { pop(p.mesh.position, '着地できない！', '#ff6b6b'); return; }
+  p.state = 'vault'; p.st = 0; p.guard = false;
+  p.fx = p.x; p.tx = LANE_X[target]; p.h0 = p.h; p.toLane = target;
+  p.climbDir = Math.sign(p.tx - p.fx);
+  p.vt = CFG.CLIMB_TIME;
+  pop(p.mesh.position, 'よいしょっ！', '#fff', 0.8, 15);
+  sfx(500, 0.08, 'triangle', 0.04, 300);
+}
+function updatePlayer(dt) {
+  const p = S.player, E = CFG.ESC_SPEED;
+  p.punchCd -= dt; p.armT -= dt;
+  p.walking = false;
+  if (p.state === 'thrown') {
+    p.st += dt;
+    if (p.st < CFG.THROW_FLY) {
+      const k = p.st / CFG.THROW_FLY;
+      p.x = lerp(p.fx, p.tx, easeOut(k));
+      p.y = lerp(p.fy, p.my, k);
+      p.h = lerp(p.h0, footY('S', p.my), k) + Math.sin(Math.PI * k) * 1.3;
+      return;
+    }
+    const k = Math.min(1, (p.st - CFG.THROW_FLY) / p.tumbleT);
+    p.x = p.tx;
+    p.y = lerp(p.my, p.ty, k);
+    p.h = footY('S', p.y) + Math.abs(Math.sin(p.y * 1.4)) * 0.18;
+    p.roll = k * p.rollTotal;
+    if (k >= 1) {
+      p.lane = 'S'; p.state = 'stun'; p.st = 0; p.roll = 0; p.h = footY('S', p.y);
+      sfx(80, 0.2, 'square', 0.06, -30);
+      if (S.mode === 'stand') { finish(true); return; }
+      p.hp = CFG.PLAYER_HP;
+    }
+    return;
+  }
+  if (p.state === 'vault') {
+    p.st += dt;
+    const k = Math.min(1, p.st / p.vt);
+    const s = clamp((k - 0.2) / 0.62, 0, 1), xs = s * s * (3 - 2 * s);
+    p.x = lerp(p.fx, p.tx, xs);
+    const hump = (k > 0.2 && k < 0.9) ? Math.sin(Math.PI * (k - 0.2) / 0.7) * 1.15 : 0;
+    p.h = lerp(p.h0, footY(p.toLane, p.y), xs) + hump;
+    if (k >= 1) {
+      p.lane = p.toLane; p.state = 'normal';
+      sfx(120, 0.12, 'square', 0.05, -40);
+    }
+    return;
+  }
+  if (p.state === 'stun') {
+    p.st += dt;
+    p.h = footY(p.lane, p.y);
+    if (p.st >= CFG.STUN) p.state = 'normal';
+    return;
+  }
+  const wasGuard = p.guard;
+  p.guard = !S.demo && input.guard && p.lane !== 'S';
+  p.guardT = p.guard ? (wasGuard ? p.guardT + dt : 0) : 0;
+  let v = p.lane === 'S' ? 0 : E;
+  if (!p.guard && !S.demo) {
+    if (input.up) { v += CFG.WALK_SPEED; p.walking = true; }
+    else if (input.down) { v -= (S.mode === 'stand' ? CFG.STAND_DOWN_SPEED : CFG.BACK_SPEED); p.walking = true; }
+  }
+  const prevY = p.y;
+  p.y += v * dt;
+  if (p.lane === 'R' && !S.demo) {
+    if (S.mode === 'walk') {
+      const f = foeAhead(prevY);
+      if (f && p.y > f.y - 1) p.y = f.y - 1;
+    } else {
+      for (const f of S.foes) {
+        if (!f.alive || f.state === 'enter') continue;
+        if (f.y < prevY) p.y = Math.max(p.y, f.y + 1);
+        else p.y = Math.min(p.y, f.y - 1);
+      }
+    }
+  }
+  p.y = Math.max(0, p.y);
+  p.h = footY(p.lane, p.y);
+  if (p.y >= CFG.STEPS && v > 0) { S.t -= (p.y - CFG.STEPS) / v; finish(false); }
+}
+function finish(over) {
+  if (S.demo) { startDemo(); return; }
+  if (S.phase !== 'run') return;
+  S.phase = 'finish'; S.finishT = 0; S.final = S.t; S.over = over;
+  if (over) {
+    sfx(220, 0.6, 'sawtooth', 0.05, -160);
+  } else {
+    sfx(784, 0.12, 'square', 0.05);
+    setTimeout(() => sfx(988, 0.12, 'square', 0.05), 130);
+    setTimeout(() => sfx(1318, 0.3, 'square', 0.05), 260);
+  }
+}
+
+// ===== 更新 =====
+function updateStanders(dt) {
+  for (const s of S.standers) s.y += CFG.ESC_SPEED * dt;
+  S.standers = S.standers.filter(s => {
+    if (s.y < CFG.STEPS + 0.3) return true;
+    scene.remove(s.mesh);
+    return false;
+  });
+  const lowest = S.standers.reduce((m, s) => Math.min(m, s.y), 999);
+  const yNew = ((S.esc % 1) + 0.5) % 1;
+  if (lowest - yNew >= S.nextBoard - 0.01) {
+    addStander(yNew);
+    S.nextBoard = 1 + Math.floor(rand(1, 3));
+  }
+}
+function updateFx(dt) {
+  for (const q of S.pops) q.t += dt;
+  S.pops = S.pops.filter(q => q.t < q.life);
+  for (const b of S.bodies) { b.t += dt; if (b.t >= b.dur) b.life -= dt; }
+  S.bodies = S.bodies.filter(b => {
+    if (b.life > 0) return true;
+    scene.remove(b.mesh);
+    return false;
+  });
+  S.shake = Math.max(0, S.shake - dt * 40);
+}
+function step(dt) {
+  S.t += dt;
+  S.esc += CFG.ESC_SPEED * dt;
+  updateStanders(dt);
+  updatePlayer(dt);
+  if (S.phase !== 'run') return;
+  updateFoes(dt);
+  spawns(dt);
+  updateFx(dt);
+}
+function finishTick(dt) {
+  const p = S.player;
+  S.finishT += dt;
+  S.esc += CFG.ESC_SPEED * dt;
+  updateStanders(dt);
+  if (!S.over) {
+    const stopY = CFG.STEPS + 12;
+    p.walking = p.y < stopY;
+    if (p.walking) p.y = Math.min(stopY, p.y + 2.4 * dt);
+    p.h = footY(p.lane, p.y);
+  }
+  updateFx(dt);
+  if (!S.shown) {
+    fadeEl.style.opacity = String(clamp((S.finishT - 0.3) / 0.8, 0, 1));
+    if (S.finishT > 1.2) showResult();
+  }
+}
+function place(m, x, ys, h, rotY, smooth) {
+  m.position.x = x;
+  m.position.z = -ys * D;
+  m.position.y = smooth ? lerp(m.position.y, h, 0.4) : h;
+  m.rotation.y = rotY;
+}
+function syncMeshes() {
+  const p = S.player;
+  for (const s of S.standers) {
+    const vis = Math.abs(s.y - p.y) < 90;
+    s.mesh.visible = vis;
+    if (!vis) continue;
+    place(s.mesh, LANE_X.L, s.y, footY('L', s.y), 0, false);
+    pose(s.mesh, { phone: s.phone });
+  }
+  for (const f of S.foes) {
+    const faceBack = f.kind === 'blocker' && (f.state === 'windup' || f.state === 'recover');
+    place(f.mesh, f.x + (f.shakeT > 0 ? rand(-0.03, 0.03) : 0), f.y, footY('R', f.y), faceBack ? Math.PI : 0, true);
+    pose(f.mesh, {
+      walk: f.state === 'walk' ? S.t * 10 : null, akimbo: f.kind === 'blocker' && f.state !== 'windup',
+      reach: f.state === 'windup', stagger: f.state === 'stagger'
+    });
+  }
+  for (const b of S.bodies) {
+    const k = Math.min(1, b.t / b.dur), y = lerp(b.y0, b.y1, k);
+    b.mesh.position.set(lerp(b.x0, b.x1, easeOut(k)), lerp(b.h0, footY('S', b.y1), k) + Math.sin(Math.PI * k) * 1.2 + (k >= 1 ? 0.25 : 0), -y * D);
+    pose(b.mesh, {});
+    if (k < 1) b.mesh.rotation.z = k * Math.PI * 3; else b.mesh.rotation.x = Math.PI / 2;
+  }
+  const faceTarget = (S.mode === 'stand' && S.phase !== 'finish') ? Math.PI : 0;
+  p.face = lerp(p.face, faceTarget, 0.25);
+  place(p.mesh, p.x, p.y, p.h, p.face, p.state === 'normal' || p.state === 'stun');
+  pose(p.mesh, {
+    walk: p.walking ? S.t * 12 : null, punch: p.armT > 0, guard: p.guard && p.armT <= 0,
+    akimbo: S.mode === 'stand' && p.lane === 'R' && p.armT <= 0 && !p.guard && !p.walking
+  });
+  const m = p.mesh;
+  if (p.state === 'thrown') {
+    const k = Math.min(1, p.st / CFG.THROW_FLY);
+    m.rotation.set(p.roll, 0, -k * Math.PI * 2.5);
+    m.position.x = p.x - 0.85 * k;
+    m.position.y += 0.3 * k;
+  } else if (p.state === 'stun' && p.lane === 'S') {
+    const k = 1 - clamp((p.st - CFG.STUN * 0.5) / (CFG.STUN * 0.5), 0, 1);
+    m.rotation.set(0, 0, -k * Math.PI / 2);
+    m.position.x = p.x - 0.85 * k;
+    m.position.y = p.h + 0.3 * k;
+  } else if (p.state === 'vault') {
+    climbPose(p);
+  }
+}
+function updateCamera(dt) {
+  const p = S.player;
+  const back = S.mode === 'stand' && !S.demo && p.lane === 'R' && p.state === 'normal' && S.phase !== 'finish';
+  const down = p.state === 'thrown' || (p.state === 'stun' && p.lane === 'S');
+  let tp, tl;
+  if (back) {
+    tp = wpc(p.x + 0.55, p.y + 3.2, 2.3); tl = wpc(p.x, p.y - 5, 0.4);
+  } else if (down) {
+    if (S.mode === 'stand') { tp = wpc(1.0, p.y + 5, 3.0); tl = wpc(1.5, p.y - 2, 0.3); }
+    else { tp = wpc(1.1, p.y - 6.5, 3.0); tl = wpc(1.5, p.y + 1, 0.3); }
+  } else {
+    tp = wpc(p.x * 0.5 + 0.55, p.y - 4.0, 2.05); tl = wpc(p.x * 0.7, p.y + 6, 1.0);
+  }
+  const k = S.snap ? 1 : 1 - Math.exp(-dt * (down ? 9 : 5));
+  S.snap = false;
+  camPos.lerp(tp, k); camLook.lerp(tl, k);
+  camera.position.copy(camPos);
+  if (S.shake > 0) camera.position.add(new THREE.Vector3(rand(-1, 1), rand(-1, 1), 0).multiplyScalar(S.shake * 0.004));
+  camera.lookAt(camLook);
+}
+
+// ===== HUD =====
+const _v = new THREE.Vector3();
+function proj(pos, h) {
+  _v.set(pos.x, pos.y + h, pos.z).project(camera);
+  if (_v.z > 1 || _v.z < -1) return null;
+  return { x: (_v.x + 1) / 2 * VW, y: (1 - _v.y) / 2 * VH };
+}
+function label(x, y, text, color, size = 13) {
+  hctx.font = `800 ${size}px ${FONT}`;
+  hctx.textAlign = 'center';
+  hctx.lineWidth = Math.max(3, size / 7);
+  hctx.strokeStyle = 'rgba(0,0,0,.85)';
+  hctx.strokeText(text, x, y);
+  hctx.fillStyle = color;
+  hctx.fillText(text, x, y);
+}
+function bar(x, y, w, h, r, color) {
+  hctx.fillStyle = 'rgba(0,0,0,.6)';
+  hctx.fillRect(x - 1, y - 1, w + 2, h + 2);
+  hctx.fillStyle = color || (r > 0.5 ? '#7CFC9A' : r > 0.25 ? '#ffd84d' : '#ff6b6b');
+  hctx.fillRect(x, y, w * clamp(r, 0, 1), h);
+}
+function hint() {
+  const p = S.player;
+  if (p.state === 'thrown' || p.state === 'stun') return S.mode === 'stand' ? '投げ飛ばされた！' : '階段を転げ落ちた！';
+  if (p.state === 'vault') return '手すりを乗り越え中…';
+  if (p.lane === 'S') return '階段：↑で登る ／ ←で手すりを越えて戻る';
+  if (p.guard) return 'ガード中（動けない・殴れない）';
+  const f = contactFoe();
+  if (f) {
+    if (f.state === 'windup') return '攻撃が来る！ 防御でガード（直前ならジャスト）';
+    if (f.state === 'recover' || f.state === 'stagger') return 'スキあり！ 殴ってダメージ2倍';
+    return '殴って押し返せ ／「！」が出たら防御';
+  }
+  return S.mode === 'walk' ? '↑で歩く ／ →で階段へ' : '↓で下の段へ ／ ↑で上の段へ';
+}
+function drawHUD() {
+  hctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  hctx.clearRect(0, 0, VW, VH);
+  if (S.demo) return;
+  hctx.textBaseline = 'middle';
+  const p = S.player;
+  for (const f of S.foes) {
+    if (!f.alive) continue;
+    const s = proj(f.mesh.position, 2.0);
+    if (!s) continue;
+    label(s.x, s.y - 14, f.type.name, '#ffb36b', 12);
+    bar(s.x - 22, s.y - 3, 44, 5, f.hp / f.type.hp);
+    if (f.state === 'windup') label(s.x + 32, s.y - 8, '！', '#ff4040', 32);
+    else if (f.state === 'recover' || f.state === 'stagger') label(s.x + 32, s.y - 4, 'スキ', '#ffd84d', 15);
+  }
+  for (const q of S.pops) {
+    const s = proj(q.pos, 0);
+    if (!s) continue;
+    hctx.globalAlpha = clamp(1 - q.t / q.life, 0, 1);
+    label(s.x, s.y - q.t * 50, q.text, q.color, q.size);
+  }
+  hctx.globalAlpha = 1;
+  const color = S.mode === 'walk' ? '#ff8a3d' : '#5cc8ff';
+  const top = 8 + SAT;
+  const stairY = clamp((S.t - CFG.CLIMB_TIME) * CFG.WALK_SPEED, 0, CFG.STEPS);
+  hctx.fillStyle = 'rgba(0,0,0,.55)';
+  hctx.fillRect(0, 0, VW, top + 58);
+  hctx.textAlign = 'left';
+  hctx.font = `800 28px ${FONT}`;
+  hctx.fillStyle = '#fff';
+  hctx.fillText(S.t.toFixed(2) + '秒', 14, top + 18);
+  hctx.font = `700 12px ${FONT}`;
+  if (S.mode === 'walk') {
+    const lead = Math.round(Math.min(CFG.STEPS, p.y) - stairY);
+    hctx.fillStyle = lead >= 0 ? '#7CFC9A' : '#ff6b6b';
+    hctx.fillText(`階段比 ${lead >= 0 ? '+' : ''}${lead}段`, 14, top + 42);
+  } else {
+    hctx.fillStyle = '#ffd84d';
+    hctx.fillText(`妨害 ${S.stats.block}人　相手の殴りLv ${powerLv() + 1}`, 14, top + 42);
+  }
+  hctx.textAlign = 'right';
+  hctx.font = `700 17px ${FONT}`;
+  hctx.fillStyle = '#fff';
+  hctx.fillText(`${clamp(Math.floor(p.y), 0, CFG.STEPS)} / ${CFG.STEPS}段`, VW - 14, top + 14);
+  hctx.font = `700 12px ${FONT}`;
+  hctx.fillStyle = color;
+  hctx.fillText(`${playerName}（${S.mode === 'walk' ? '右側を歩く' : '右側で立ち止まる'}）`, VW - 14, top + 38);
+  bar(0, top + 58, VW, 5, p.y / CFG.STEPS, color);
+  if (S.mode === 'walk') {
+    hctx.fillStyle = '#ffffff';
+    hctx.fillRect(VW * stairY / CFG.STEPS - 2, top + 55, 4, 11);
+  } else {
+    label(VW / 2, top + 80, `HP ${Math.max(0, p.hp)} / ${CFG.PLAYER_HP}`, '#fff', 12);
+    bar(VW / 2 - 70, top + 92, 140, 8, p.hp / CFG.PLAYER_HP);
+  }
+  if (S.phase === 'run' || S.phase === 'count') {
+    const h = hint();
+    hctx.font = `700 14px ${FONT}`;
+    const w = Math.min(VW - 20, hctx.measureText(h).width + 24);
+    hctx.fillStyle = 'rgba(0,0,0,.55)';
+    hctx.fillRect(VW / 2 - w / 2, VH - 205 - SAB, w, 30);
+    hctx.textAlign = 'center';
+    hctx.fillStyle = '#fff';
+    hctx.fillText(h, VW / 2, VH - 190 - SAB);
+  }
+  if (S.phase === 'count') label(VW / 2, VH * 0.4, String(Math.ceil(S.count)), '#fff', 90);
+  else if (S.phase === 'run' && S.t < 0.7) label(VW / 2, VH * 0.4, 'GO!', '#ffd84d', 80);
+  else if (S.phase === 'finish') label(VW / 2, VH * 0.4, S.over ? '投げ飛ばされた！' : (S.mode === 'walk' ? 'GOAL!' : '終点到着！'), '#ffd84d', 48);
+}
+
+// ===== ユーザー名・ランキング =====
+const sbUrl = () => String(RANKING.SUPABASE_URL || '').trim().replace(/\/+$/, '').replace(/\/rest\/v1$/, '');
+const sbKey = () => String(RANKING.SUPABASE_KEY || '').trim();
+// 公開してはいけない種類のキー（secret / service_role）が貼られていないか
+function secretKeyPasted() {
+  const k = sbKey();
+  if (k.startsWith('sb_secret_')) return true;
+  if (k.startsWith('eyJ')) {
+    try {
+      return JSON.parse(atob(k.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))).role === 'service_role';
+    } catch (e) {}
+  }
+  return false;
+}
+const isOnline = () => !!(sbUrl() && sbKey()) && !secretKeyPasted();
+let TOKEN = null;
+// この端末の合言葉（名前の持ち主の確認に使う。端末内に保存）
+function token() {
+  if (TOKEN) return TOKEN;
+  let t = store.get('escfight_token');
+  if (!t || t.length < 16) {
+    try {
+      t = crypto.randomUUID ? crypto.randomUUID()
+        : Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
+    } catch (e) {
+      t = Array.from({ length: 32 }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+    }
+    store.set('escfight_token', t);
+  }
+  return (TOKEN = t);
+}
+// Supabase の関数を呼ぶ（8秒で打ち切り）
+async function rpc(fn, args) {
+  const K = sbKey(), H = { apikey: K, 'Content-Type': 'application/json' };
+  if (K.startsWith('eyJ')) H.Authorization = 'Bearer ' + K;
+  const ctrl = new AbortController(), timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const r = await fetch(`${sbUrl()}/rest/v1/rpc/${fn}`, { method: 'POST', headers: H, body: JSON.stringify(args), signal: ctrl.signal });
+    if (!r.ok) throw new Error(`${fn} ${r.status}`);
+    return await r.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+const Names = {
+  owned: null,
+  // 名前の登録・確認。他の端末が登録済みなら { ok: false, error: 'name_taken' }
+  async claim(name) {
+    if (!isOnline() || this.owned === nameKey(name)) return { ok: true, name };
+    const r = await rpc('claim_name', { p_name: name, p_token: token() });
+    if (!r || !r.ok) return { ok: false, error: (r && r.error) || 'error' };
+    this.owned = nameKey(r.name || name);
+    return { ok: true, name: r.name || name };
+  }
+};
+const Rank = {
+  cmp(mode) {
+    return mode === 'walk'
+      ? (a, b) => (a.sec - b.sec) || (a.at - b.at)
+      : (a, b) => (b.blocks - a.blocks) || (a.sec - b.sec) || (a.at - b.at);
+  },
+  // オンラインにつながらないときは、端末内ランキングに切り替える
+  async run(e) {
+    if (!isOnline()) return this.local(e);
+    try {
+      return await this.online(e);
+    } catch (err) {
+      if (err && err.serverError) throw err;
+      const r = this.local(e);
+      r.fallback = true;
+      return r;
+    }
+  },
+  // 端末内ランキング（1人1記録＝自己ベスト）
+  local(e) {
+    const key = 'escfight2_best_' + e.mode, cmp = this.cmp(e.mode);
+    let list = [];
+    try { list = JSON.parse(store.get(key) || '[]'); } catch (_) {}
+    if (!Array.isArray(list)) list = [];
+    const rec = { key: nameKey(e.name), name: e.name, sec: e.sec, blocks: e.blocks, at: Date.now() };
+    let mine = list.find(r => r.key === rec.key);
+    if (!mine) { mine = rec; list.push(rec); }
+    else if (cmp(rec, mine) < 0) Object.assign(mine, rec);
+    list.sort(cmp);
+    store.set(key, JSON.stringify(list));
+    const idx = list.indexOf(mine);
+    return {
+      local: true, name: mine.name, total: list.length,
+      best: mine.sec === e.sec && mine.blocks === e.blocks,
+      me: { rank: idx + 1, sec: mine.sec, blocks: mine.blocks },
+      top: list.slice(0, 50).map((r, i) => ({ rank: i + 1, name: r.name, sec: r.sec, blocks: r.blocks, me: r === mine }))
+    };
+  },
+  async online(e) {
+    const r = await rpc('submit_score', { p_name: e.name, p_token: token(), p_mode: e.mode, p_sec: e.sec, p_blocks: e.blocks });
+    if (!r || !r.ok) {
+      const err = new Error('submit_score');
+      err.serverError = (r && r.error) || 'error';
+      throw err;
+    }
+    return r;
+  }
+};
+let resultSeq = 0, lastResult = null;
+function renderRank(res, e) {
+  const fmt = r => e.mode === 'walk' ? `${Number(r.sec).toFixed(2)}秒` : `${Number(r.blocks)}人`;
+  const me = res.me || { rank: 0, sec: e.sec, blocks: e.blocks };
+  const isBest = res.best !== false;
+  const official = !res.fallback;
+  const T = TITLES[e.mode];
+  const rnCell = rank => {
+    const t = official && tierOf(rank);
+    return `<span class="rn${t ? ' ' + t.key : ''}">${rank}</span>`;
+  };
+  let rows = (res.top || []).map(r => `<tr class="${r.me ? 'me' : ''}"><td>${rnCell(r.rank)}</td><td>${escHTML(r.name)}</td><td>${fmt(r)}</td></tr>`).join('');
+  if (me.rank > 50) rows += `<tr><td colspan="3" style="text-align:center">…</td></tr><tr class="me"><td>${rnCell(me.rank)}</td><td>${escHTML(res.name || e.name)}</td><td>${fmt(me)}</td></tr>`;
+  const note = res.fallback ? '<br><small>オンラインランキングに接続できなかったため、この端末内の記録を表示しています</small>'
+    : res.local ? '<br><small>（この端末内の記録）</small>' : '';
+  $('#rankArea').innerHTML = `<h3>ランキング（上位50位）</h3>
+    <p class="rk">あなたの順位：<b>${me.rank}位</b> ／ ${res.total}人中${isBest ? '' : `<br>（自己ベスト ${fmt(me)}）`}${note}</p>
+    <div class="rankbox"><table>${rows}</table></div>
+    <p class="cap"><span class="rn gold">1〜10位</span> ${T.gold}<br><span class="rn silver">11〜25位</span> ${T.silver}</p>`;
+  const tier = official && tierOf(me.rank);
+  if (tier) $('#badge').innerHTML = `<span class="badge ${tier.key}">${tier.icon} ${T[tier.key]}</span>`;
+  Object.assign(lastResult, { rank: official ? me.rank : 0, isBest, bestText: fmt(me) });
+}
+function showResult() {
+  S.shown = true;
+  const mode = S.mode, blocks = S.stats.block, sec = Math.round(S.final * 100) / 100;
+  const seq = ++resultSeq;
+  lastResult = { mode, sec, blocks, rank: 0, isBest: true, bestText: '' };
+  $('#resultInner').innerHTML = `
+    <div class="big">${mode === 'walk' ? sec.toFixed(2) + '秒' : '妨害 ' + blocks + '人'}</div>
+    <div id="badge"></div>
+    <div class="btns">
+      <button class="walk" data-start="walk">右側を歩く</button>
+      <button class="stand" data-start="stand">右側で立ち止まる</button>
+      <button class="x" data-act="share" id="shareBtn" disabled>Xでシェア</button>
+    </div>
+    <div id="rankArea"><h3>ランキング</h3><p class="rk">読み込み中…</p></div>
+    <div class="btns"><button class="sub" data-act="title">タイトルへ</button></div>`;
+  $('#result').classList.add('show');
+  $('#result').scrollTop = 0;
+  fadeEl.style.transition = 'opacity .5s';
+  fadeEl.style.opacity = '0';
+  const e = { name: playerName, mode, sec, blocks };
+  Rank.run(e).then(res => {
+    if (seq === resultSeq) renderRank(res, e);
+  }).catch(err => {
+    if (seq !== resultSeq) return;
+    const code = err && err.serverError;
+    if (code === 'name_taken') Names.owned = null;
+    const msg = code === 'name_taken' ? 'この名前は他の人が登録済みのため、記録できませんでした。タイトルで名前を変えてください'
+      : code === 'invalid_score' ? 'この記録は受け付けられませんでした'
+      : '記録の送信に失敗しました';
+    $('#rankArea').innerHTML = `<h3>ランキング</h3><p class="rk">${msg}</p>`;
+  }).finally(() => {
+    const b = $('#shareBtn');
+    if (seq === resultSeq && b) b.disabled = false;
+  });
+}
+function share() {
+  const r = lastResult;
+  if (!r) return;
+  const T = TITLES[r.mode], tier = tierOf(r.rank);
+  const lines = [r.mode === 'walk'
+    ? `私はエスカレーターを歩いて${r.sec.toFixed(2)}秒で登り切りました！`
+    : `私はエスカレーターを登る人を${r.blocks}人妨害しました！`];
+  if (r.rank >= 1 && r.rank <= SHARE_RANK) lines.push(r.isBest ? `ランキング${r.rank}位！` : `（自己ベスト${r.bestText}でランキング${r.rank}位）`);
+  if (tier) lines.push(`${tier.icon}${T[tier.key]}の称号を${r.isBest ? '獲得' : '保持中'}！`);
+  lines.push('あなたはエスカレーター、歩く？立ち止まる？', '#エスカレーター闘争');
+  const url = location.href.split('#')[0].split('?')[0];
+  const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(lines.join('\n'))}&url=${encodeURIComponent(url)}`;
+  const w = window.open(intent, '_blank');
+  if (!w) location.href = intent;
+}
+
+// ===== 入力 =====
+const kb = { up: false, down: false, guard: false }, joy = { x: 0, y: 0, id: null, latch: 0 };
+const input = { up: false, down: false, guard: false };
+let btnGuard = false;
+function readInput() {
+  input.up = kb.up || joy.y < -0.4;
+  input.down = kb.down || joy.y > 0.5;
+  input.guard = kb.guard || btnGuard;
+  if (Math.abs(joy.x) > 0.6 && Math.abs(joy.x) > Math.abs(joy.y) * 0.8) {
+    const d = Math.sign(joy.x);
+    if (joy.latch !== d) { joy.latch = d; laneMove(d); }
+  } else if (Math.abs(joy.x) < 0.3) {
+    joy.latch = 0;
+  }
+}
+const joyEl = $('#joy'), knob = $('#knob');
+function moveJoy(e) {
+  const r = joyEl.getBoundingClientRect();
+  let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+  const max = r.width * 0.4, d = Math.hypot(dx, dy);
+  if (d > max) { dx *= max / d; dy *= max / d; }
+  joy.x = dx / max; joy.y = dy / max;
+  knob.style.transform = `translate(${dx}px, ${dy}px)`;
+}
+joyEl.addEventListener('pointerdown', e => { unlockAudio(); joy.id = e.pointerId; joyEl.setPointerCapture(e.pointerId); moveJoy(e); });
+joyEl.addEventListener('pointermove', e => { if (e.pointerId === joy.id) moveJoy(e); });
+const endJoy = e => {
+  if (e.pointerId !== joy.id) return;
+  joy.id = null; joy.x = joy.y = 0; knob.style.transform = '';
+};
+joyEl.addEventListener('pointerup', endJoy);
+joyEl.addEventListener('pointercancel', endJoy);
+const punchBtn = $('#punch'), guardBtn = $('#guard');
+punchBtn.addEventListener('pointerdown', e => { e.preventDefault(); unlockAudio(); punchBtn.classList.add('on'); attack(); });
+guardBtn.addEventListener('pointerdown', e => { e.preventDefault(); unlockAudio(); guardBtn.classList.add('on'); btnGuard = true; });
+for (const ev of ['pointerup', 'pointercancel', 'pointerleave']) {
+  punchBtn.addEventListener(ev, () => punchBtn.classList.remove('on'));
+  guardBtn.addEventListener(ev, () => { guardBtn.classList.remove('on'); btnGuard = false; });
+}
+document.addEventListener('contextmenu', e => { if (!e.target.closest('input')) e.preventDefault(); });
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  unlockAudio();
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') kb.up = true;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') kb.down = true;
+  if (e.code === 'KeyX' || e.code === 'KeyK') kb.guard = true;
+  if (e.repeat) return;
+  if (e.code === 'ArrowLeft' || e.code === 'KeyA') laneMove(-1);
+  if (e.code === 'ArrowRight' || e.code === 'KeyD') laneMove(1);
+  if (e.code === 'KeyZ' || e.code === 'KeyJ') attack();
+  if (e.code === 'KeyR' && S && !S.demo) startGame(S.mode);
+  if (e.code === 'KeyM') muted = !muted;
+});
+addEventListener('keyup', e => {
+  if (e.code === 'ArrowUp' || e.code === 'KeyW') kb.up = false;
+  if (e.code === 'ArrowDown' || e.code === 'KeyS') kb.down = false;
+  if (e.code === 'KeyX' || e.code === 'KeyK') kb.guard = false;
+});
+addEventListener('blur', () => { kb.up = kb.down = kb.guard = false; btnGuard = false; });
+let claiming = false;
+function setTitleBusy(on) {
+  document.querySelectorAll('#title [data-start]').forEach(b => { b.disabled = on; });
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-start],[data-act]');
+  if (!b || b.disabled) return;
+  unlockAudio();
+  if (b.dataset.act === 'title') { showTitle(); return; }
+  if (b.dataset.act === 'share') { share(); return; }
+  const mode = b.dataset.start;
+  if (!$('#title').classList.contains('show')) { startGame(mode); return; }
+  if (claiming) return;
+  const nameInput = $('#name'), msg = $('#nameMsg');
+  const name = cleanName(nameInput.value);
+  if (!name) {
+    msg.className = 'err';
+    msg.textContent = 'ユーザー名を入力してください';
+    nameInput.focus();
+    return;
+  }
+  claiming = true;
+  setTitleBusy(true);
+  msg.className = 'err info';
+  msg.textContent = isOnline() ? '名前を確認中…' : '';
+  try {
+    let r;
+    try {
+      r = await Names.claim(name);
+    } catch (err) {
+      r = { ok: true, name }; // 通信できないときも遊べるようにする（記録は端末内に保存）
+    }
+    if (!r.ok) {
+      msg.className = 'err';
+      msg.textContent = r.error === 'name_taken'
+        ? 'このユーザー名は既に使われています。別の名前にしてください（別の端末で登録した名前も使えません）'
+        : 'この名前は使えません。別の名前にしてください';
+      return;
+    }
+    playerName = r.name;
+    store.set('esc3d_name', playerName);
+    msg.textContent = '';
+    startGame(mode);
+  } finally {
+    claiming = false;
+    setTitleBusy(false);
+  }
+});
+
+// ===== 画面サイズ・ループ =====
+function resize() {
+  VW = innerWidth; VH = innerHeight; DPR = Math.min(devicePixelRatio || 1, 2);
+  const sa = getComputedStyle($('#sa'));
+  SAT = parseFloat(sa.paddingTop) || 0;
+  SAB = parseFloat(sa.paddingBottom) || 0;
+  renderer.setPixelRatio(Math.min(DPR, 1.5));
+  renderer.setSize(VW, VH, false);
+  hud.width = VW * DPR; hud.height = VH * DPR;
+  camera.aspect = VW / VH;
+  camera.fov = camera.aspect < 0.8 ? 72 : 58;
+  camera.updateProjectionMatrix();
+}
+addEventListener('resize', resize);
+let last = performance.now();
+function loop(now) {
+  const raw = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  readInput();
+  if (S.phase === 'count') {
+    S.count -= raw;
+    const c = Math.ceil(S.count);
+    if (S.count <= 0) { S.phase = 'run'; sfx(1046, 0.3, 'square', 0.05); }
+    else if (c !== S.lastCount) { S.lastCount = c; sfx(523, 0.12, 'square', 0.05); }
+    updateFx(raw);
+  } else if (S.phase === 'run') {
+    step(raw);
+  } else if (S.phase === 'finish') {
+    finishTick(raw);
+  }
+  syncMeshes();
+  updateSteps();
+  updateCamera(raw);
+  renderer.render(scene, camera);
+  drawHUD();
+  requestAnimationFrame(loop);
+}
+
+buildWorld();
+resize();
+showTitle();
+if (secretKeyPasted()) {
+  $('#title .inner').insertAdjacentHTML('afterbegin', '<p class="err">設定エラー：secret key（秘密のキー）が貼り付けられています。publishable key に差し替え、Supabase でそのキーを無効化してください。</p>');
+}
+window.__ok = true;
+$('#loading').remove();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
