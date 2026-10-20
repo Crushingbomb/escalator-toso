@@ -10,12 +10,13 @@
 <meta property="og:title" content="エスカレーター闘争">
 <meta property="og:description" content="あなたはエスカレーターを、歩きますか？立ち止まりますか？">
 <meta property="og:type" content="website">
-<!-- Xのリンクカード画像：ogp.png を置いたら YOUR-NAME と YOUR-REPO を書き換える（置かない場合はこの1行を削除） -->
-<meta property="og:image" content="https://YOUR-NAME.github.io/YOUR-REPO/ogp.png">
+<!-- Xのリンクカード画像：ogp.png を置いたら「公開URL＋/ogp.png」に書き換える（例：https://escalator-toso.pages.dev/ogp.png）。置かない場合はこの1行を削除 -->
+<meta property="og:image" content="https://YOUR-SITE.pages.dev/ogp.png">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%A5%8A%3C/text%3E%3C/svg%3E">
 <style>
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   html, body {
     margin: 0; height: 100%; overflow: hidden; background: #0d1116; color: #fff;
     font-family: system-ui, -apple-system, "Hiragino Sans", "Yu Gothic UI", "Meiryo", sans-serif;
@@ -58,6 +59,7 @@
   .inner { margin: auto; padding: 24px 18px; width: min(100%, 520px); text-align: center; }
   h1 { font-size: clamp(28px, 9vw, 52px); margin: 0 0 .3em; letter-spacing: .04em; line-height: 1.2; }
   h1 span { color: #ff6b3d; }
+  h2 { font-size: 24px; margin: 0 0 .4em; }
   h3 { margin: 1.2em 0 .3em; font-size: 16px; }
   .q { font-size: 16px; line-height: 1.6; margin: .6em 0 1em; }
   .q b { color: #ffd84d; }
@@ -68,14 +70,28 @@
   button.stand { background: #5cc8ff; }
   button.sub { background: #666; color: #fff; }
   button.x { background: #000; color: #fff; border: 1px solid #555; }
+  button.rankbtn { background: transparent; color: #ffd84d; border: 2px solid #ffd84d; }
   button:disabled { opacity: .5; cursor: default; }
   input {
     font-size: 18px; padding: .6em .8em; border-radius: 10px; border: 2px solid #555; background: #1c2129;
     color: #fff; width: min(100%, 280px); text-align: center; -webkit-user-select: text; user-select: text;
   }
+  input[readonly] { border-color: #ffd84d; color: #ffd84d; cursor: default; }
+  .ninfo { font-size: 12px; color: #aab4c0; margin: .5em 0 0; line-height: 1.5; }
+  .ninfo:empty { display: none; }
   .err { color: #ff6b6b; font-size: 13px; min-height: 1.2em; margin: .3em 0; line-height: 1.5; }
   .err.info { color: #aab4c0; }
+  .confirm {
+    margin: .2em auto .4em; padding: .8em 1em .2em; max-width: 380px; border: 2px solid #ffd84d;
+    border-radius: 12px; background: rgba(255, 216, 77, .08); font-size: 14px; line-height: 1.7;
+  }
+  .confirm p { margin: 0; }
+  .confirm b { color: #ffd84d; font-size: 16px; }
   .note { font-size: 11px; color: #9aa3ad; line-height: 1.7; margin: 1.8em auto 0; max-width: 340px; }
+  .tabs { display: flex; gap: 8px; margin: .3em 0 .8em; }
+  .tab { flex: 1; padding: .65em .3em; font-size: 15px; background: #2a3039; color: #c9d1da; }
+  .tab.on[data-tab="walk"] { background: #ff8a3d; color: #111; }
+  .tab.on[data-tab="stand"] { background: #5cc8ff; color: #111; }
   .badge { display: inline-block; margin: 0 0 .3em; padding: .45em 1.1em; border-radius: 999px; font-size: 15px; font-weight: 800; }
   .gold { color: #3a2a00; background: linear-gradient(135deg, #fff3b0, #ffc93c 55%, #f0a500); }
   .silver { color: #262b33; background: linear-gradient(135deg, #ffffff, #d3d9e0 50%, #9aa4af); }
@@ -90,6 +106,7 @@
   td { padding: .25em .6em; border-bottom: 1px solid rgba(255, 255, 255, .12); text-align: left; }
   td:last-child { text-align: right; font-weight: 700; }
   .rankbox { max-height: 45vh; overflow-y: auto; border: 1px solid #333; border-radius: 8px; touch-action: pan-y; }
+  #ranking .rankbox { max-height: 52vh; }
   .rankbox table { width: 100%; margin: 0; }
   tr.me td { background: rgba(255, 216, 77, .28); }
   #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; z-index: 20; background: #0d1116; font-size: 15px; padding: 20px; text-align: center; }
@@ -127,12 +144,30 @@
   <h1>エスカレーター<span>闘争</span></h1>
   <p class="q">あなたはエスカレーターを<br><b>歩きますか？ 立ち止まりますか？</b></p>
   <input id="name" maxlength="12" placeholder="ユーザー名（12文字まで）" autocomplete="off">
+  <p id="nameInfo" class="ninfo"></p>
   <p id="nameMsg" class="err"></p>
   <div class="btns">
     <button class="walk" data-start="walk">右側を歩く</button>
     <button class="stand" data-start="stand">右側で立ち止まる</button>
   </div>
+  <div id="confirmBox" class="confirm" hidden>
+    <p>「<b id="confirmName"></b>」で登録しますか？<br>名前は1台につき1つだけで、あとから変更できません。</p>
+    <div class="btns">
+      <button data-act="confirm">登録してスタート</button>
+      <button class="sub" data-act="cancel">やめる</button>
+    </div>
+  </div>
+  <div class="btns"><button class="rankbtn" data-act="ranking">🏆 ランキングを見る</button></div>
   <p class="note">このゲームに登場するポスターに広告を載せて欲しい方を6名まで募集しています。載せて欲しい方は、直接DMをくださるとありがたいです。</p>
+</div></div>
+<div id="ranking" class="screen"><div class="inner">
+  <h2>🏆 ランキング</h2>
+  <div class="tabs">
+    <button class="tab" data-tab="walk">右側を歩く</button>
+    <button class="tab" data-tab="stand">右側で立ち止まる</button>
+  </div>
+  <div id="rankView"></div>
+  <div class="btns"><button class="sub" data-act="back">タイトルへ戻る</button></div>
 </div></div>
 <div id="result" class="screen"><div class="inner" id="resultInner"></div></div>
 <div id="fade"></div>
@@ -223,7 +258,7 @@ const AD_SLOTS = [
 // オンラインランキング（Supabase）
 // 「Project URL」と「Publishable key（sb_publishable_ で始まるキー）」を貼り付ける
 // ※ secret key（sb_secret_ で始まるキー）や service_role キーは絶対に貼らないこと
-// 空欄のままだと端末内ランキングで動作（名前の重複チェックはオンライン時のみ）
+// 空欄のままだと端末内ランキングで動作（名前の重複チェックと「1台につき1つの名前」はオンライン時のみ）
 const RANKING = {
   SUPABASE_URL: 'https://casennabjopkreyxhaje.supabase.co',
   SUPABASE_KEY: 'sb_publishable_BlqUs5oN_K88CxFEwf7GhA_oqmJNUXU'
@@ -244,7 +279,8 @@ const weighted = arr => {
 const escHTML = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const store = {
   get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
-  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+  del(k) { try { localStorage.removeItem(k); } catch (e) {} }
 };
 // ユーザー名の整形（全角英数→半角などに統一し、12文字まで）と、重複判定用のキー
 const cleanName = s => Array.from(String(s || '').normalize('NFKC').replace(/[\u0000-\u001f\u007f]/g, '').trim()).slice(0, 12).join('').trim();
@@ -698,7 +734,7 @@ function footY(lane, ys) {
 }
 
 // ===== 状態 =====
-let S = null, playerName = store.get('esc3d_name') || '';
+let S = null, playerName = store.get('esc3d_name') || '', lastMode = 'walk';
 const camPos = new THREE.Vector3(), camLook = new THREE.Vector3();
 function clearState() {
   if (!S) return;
@@ -733,8 +769,10 @@ function addStander(y) {
 }
 function startGame(mode) {
   makeState(mode);
+  lastMode = mode;
   $('#title').classList.remove('show');
   $('#result').classList.remove('show');
+  $('#ranking').classList.remove('show');
   fadeEl.style.transition = 'none';
   fadeEl.style.opacity = '0';
   if (document.activeElement) document.activeElement.blur();
@@ -747,9 +785,12 @@ function startDemo() {
 }
 function showTitle() {
   $('#result').classList.remove('show');
+  $('#ranking').classList.remove('show');
   $('#title').classList.add('show');
-  $('#name').value = playerName;
+  $('#name').value = (isOnline() && Names.registered) || playerName;
   $('#nameMsg').textContent = '';
+  $('#confirmBox').hidden = true;
+  applyNameLock();
   startDemo();
 }
 function pop(pos, text, color = '#fff', life = 0.9, size = 18) {
@@ -1285,7 +1326,7 @@ function secretKeyPasted() {
 }
 const isOnline = () => !!(sbUrl() && sbKey()) && !secretKeyPasted();
 let TOKEN = null;
-// この端末の合言葉（名前の持ち主の確認に使う。端末内に保存）
+// この端末の合言葉（端末の見分けと、名前の持ち主の確認に使う。端末内に保存）
 function token() {
   if (TOKEN) return TOKEN;
   let t = store.get('escfight_token');
@@ -1313,24 +1354,72 @@ async function rpc(fn, args) {
     clearTimeout(timer);
   }
 }
+
+// この端末で登録した名前（オンライン時は、1台につき1つだけ登録できる）
+const REG_KEY = 'escfight_reg_name';
 const Names = {
-  owned: null,
-  // 名前の登録・確認。他の端末が登録済みなら { ok: false, error: 'name_taken' }
+  registered: store.get(REG_KEY) || '',
+  confirmed: false, // このページを開いてから、サーバーで確認済みか
+  set(name) {
+    this.registered = name || '';
+    this.confirmed = !!name;
+    if (name) store.set(REG_KEY, name); else store.del(REG_KEY);
+    applyNameLock();
+  },
+  // 起動時：この端末で登録済みの名前をサーバーに問い合わせる
+  async sync() {
+    if (!isOnline()) return;
+    try {
+      const r = await rpc('my_name', { p_token: token() });
+      if (r && r.ok) this.set(r.name || '');
+    } catch (e) {}
+  },
+  // 名前の登録・確認
+  //   他の端末が登録済み → { ok: false, error: 'name_taken' }
+  //   この端末が別の名前で登録済み → { ok: false, error: 'device_has_name', name: 登録済みの名前 }
   async claim(name) {
-    if (!isOnline() || this.owned === nameKey(name)) return { ok: true, name };
+    if (!isOnline()) return { ok: true, name };
+    if (this.confirmed && nameKey(this.registered) === nameKey(name)) return { ok: true, name: this.registered };
     const r = await rpc('claim_name', { p_name: name, p_token: token() });
-    if (!r || !r.ok) return { ok: false, error: (r && r.error) || 'error' };
-    this.owned = nameKey(r.name || name);
-    return { ok: true, name: r.name || name };
+    if (r && r.ok) {
+      this.set(r.name || name);
+      return { ok: true, name: this.registered };
+    }
+    const error = (r && r.error) || 'error';
+    if (error === 'device_has_name' && r.name) this.set(r.name);
+    else if (error === 'name_taken' && nameKey(this.registered) === nameKey(name)) this.set('');
+    return { ok: false, error, name: r && r.name };
   }
 };
+// 登録済みの端末は、入力欄をその名前で固定する
+function applyNameLock() {
+  const field = $('#name'), info = $('#nameInfo');
+  const locked = isOnline() && !!Names.registered;
+  field.readOnly = locked;
+  if (locked) {
+    field.value = Names.registered;
+    $('#confirmBox').hidden = true;
+    pending = null;
+    info.textContent = 'この端末の登録名です（名前は1台につき1つで、変更できません）';
+  } else {
+    info.textContent = isOnline() ? '名前は1台につき1つだけ登録でき、あとから変更できません' : '';
+  }
+}
+function nameError(r) {
+  if (r.error === 'name_taken') return 'このユーザー名は既に他の人が使っています。別の名前にしてください';
+  if (r.error === 'device_has_name') return `この端末は「${r.name}」で登録済みです。名前は1台につき1つだけなので、「${r.name}」で遊んでください`;
+  if (r.error === 'invalid_name') return 'この名前は使えません。別の名前にしてください';
+  return '名前を登録できませんでした。時間をおいてもう一度お試しください';
+}
+
+const fmtScore = (mode, r) => mode === 'walk' ? `${Number(r.sec).toFixed(2)}秒` : `${Number(r.blocks)}人`;
 const Rank = {
   cmp(mode) {
     return mode === 'walk'
       ? (a, b) => (a.sec - b.sec) || (a.at - b.at)
       : (a, b) => (b.blocks - a.blocks) || (a.sec - b.sec) || (a.at - b.at);
   },
-  // オンラインにつながらないときは、端末内ランキングに切り替える
+  // 記録の送信。オンラインにつながらないときは、端末内ランキングに切り替える
   async run(e) {
     if (!isOnline()) return this.local(e);
     try {
@@ -1342,58 +1431,89 @@ const Rank = {
       return r;
     }
   },
+  // 両モードのランキング（タイトル画面の「ランキングを見る」用）
+  async fetchAll() {
+    const local = fallback => ({ local: true, fallback, name: null, walk: this.localView('walk'), stand: this.localView('stand') });
+    if (!isOnline()) return local(false);
+    try {
+      const r = await rpc('get_rankings', { p_token: token() });
+      if (!r || !r.ok) throw new Error('get_rankings');
+      return r;
+    } catch (err) {
+      return local(true);
+    }
+  },
   // 端末内ランキング（1人1記録＝自己ベスト）
-  local(e) {
-    const key = 'escfight2_best_' + e.mode, cmp = this.cmp(e.mode);
+  loadLocal(mode) {
     let list = [];
-    try { list = JSON.parse(store.get(key) || '[]'); } catch (_) {}
-    if (!Array.isArray(list)) list = [];
+    try { list = JSON.parse(store.get('escfight2_best_' + mode) || '[]'); } catch (_) {}
+    return Array.isArray(list) ? list.sort(this.cmp(mode)) : [];
+  },
+  view(list, key) {
+    const idx = list.findIndex(r => r.key === key);
+    return {
+      total: list.length,
+      me: idx >= 0 ? { rank: idx + 1, sec: list[idx].sec, blocks: list[idx].blocks } : null,
+      top: list.slice(0, 50).map((r, i) => ({ rank: i + 1, name: r.name, sec: r.sec, blocks: r.blocks, me: i === idx }))
+    };
+  },
+  localView(mode) {
+    return this.view(this.loadLocal(mode), nameKey((isOnline() && Names.registered) || playerName));
+  },
+  local(e) {
+    const list = this.loadLocal(e.mode), cmp = this.cmp(e.mode);
     const rec = { key: nameKey(e.name), name: e.name, sec: e.sec, blocks: e.blocks, at: Date.now() };
     let mine = list.find(r => r.key === rec.key);
     if (!mine) { mine = rec; list.push(rec); }
     else if (cmp(rec, mine) < 0) Object.assign(mine, rec);
     list.sort(cmp);
-    store.set(key, JSON.stringify(list));
-    const idx = list.indexOf(mine);
-    return {
-      local: true, name: mine.name, total: list.length,
-      best: mine.sec === e.sec && mine.blocks === e.blocks,
-      me: { rank: idx + 1, sec: mine.sec, blocks: mine.blocks },
-      top: list.slice(0, 50).map((r, i) => ({ rank: i + 1, name: r.name, sec: r.sec, blocks: r.blocks, me: r === mine }))
-    };
+    store.set('escfight2_best_' + e.mode, JSON.stringify(list));
+    return { local: true, name: mine.name, best: mine.sec === e.sec && mine.blocks === e.blocks, ...this.view(list, rec.key) };
   },
   async online(e) {
     const r = await rpc('submit_score', { p_name: e.name, p_token: token(), p_mode: e.mode, p_sec: e.sec, p_blocks: e.blocks });
     if (!r || !r.ok) {
       const err = new Error('submit_score');
       err.serverError = (r && r.error) || 'error';
+      err.serverName = r && r.name;
       throw err;
     }
     return r;
   }
 };
-let resultSeq = 0, lastResult = null;
-function renderRank(res, e) {
-  const fmt = r => e.mode === 'walk' ? `${Number(r.sec).toFixed(2)}秒` : `${Number(r.blocks)}人`;
-  const me = res.me || { rank: 0, sec: e.sec, blocks: e.blocks };
-  const isBest = res.best !== false;
-  const official = !res.fallback;
-  const T = TITLES[e.mode];
-  const rnCell = rank => {
+// ランキング表（上位50位。自分が圏外なら最後に自分の行を付ける）
+function rankTable(mode, view, official, myName) {
+  const top = view.top || [], me = view.me;
+  if (!top.length) return '<p class="rk"><small>まだ記録がありません</small></p>';
+  const rn = rank => {
     const t = official && tierOf(rank);
     return `<span class="rn${t ? ' ' + t.key : ''}">${rank}</span>`;
   };
-  let rows = (res.top || []).map(r => `<tr class="${r.me ? 'me' : ''}"><td>${rnCell(r.rank)}</td><td>${escHTML(r.name)}</td><td>${fmt(r)}</td></tr>`).join('');
-  if (me.rank > 50) rows += `<tr><td colspan="3" style="text-align:center">…</td></tr><tr class="me"><td>${rnCell(me.rank)}</td><td>${escHTML(res.name || e.name)}</td><td>${fmt(me)}</td></tr>`;
+  let rows = top.map(r => `<tr class="${r.me ? 'me' : ''}"><td>${rn(r.rank)}</td><td>${escHTML(r.name)}</td><td>${fmtScore(mode, r)}</td></tr>`).join('');
+  if (me && !top.some(r => r.me)) {
+    rows += `<tr><td colspan="3" style="text-align:center">…</td></tr><tr class="me"><td>${rn(me.rank)}</td><td>${escHTML(myName)}</td><td>${fmtScore(mode, me)}</td></tr>`;
+  }
+  return `<div class="rankbox"><table>${rows}</table></div>`;
+}
+const titleCaption = mode => `<p class="cap"><span class="rn gold">1〜10位</span> ${TITLES[mode].gold}<br><span class="rn silver">11〜25位</span> ${TITLES[mode].silver}</p>`;
+const badgeHTML = (mode, tier) => `<span class="badge ${tier.key}">${tier.icon} ${TITLES[mode][tier.key]}</span>`;
+
+// ===== 結果画面 =====
+let resultSeq = 0, lastResult = null;
+function renderRank(res, e) {
+  const me = res.me || { rank: 0, sec: e.sec, blocks: e.blocks };
+  const isBest = res.best !== false;
+  const official = !res.fallback;
   const note = res.fallback ? '<br><small>オンラインランキングに接続できなかったため、この端末内の記録を表示しています</small>'
     : res.local ? '<br><small>（この端末内の記録）</small>' : '';
   $('#rankArea').innerHTML = `<h3>ランキング（上位50位）</h3>
-    <p class="rk">あなたの順位：<b>${me.rank}位</b> ／ ${res.total}人中${isBest ? '' : `<br>（自己ベスト ${fmt(me)}）`}${note}</p>
-    <div class="rankbox"><table>${rows}</table></div>
-    <p class="cap"><span class="rn gold">1〜10位</span> ${T.gold}<br><span class="rn silver">11〜25位</span> ${T.silver}</p>`;
+    <p class="rk">あなたの順位：<b>${me.rank}位</b> ／ ${res.total}人中${isBest ? '' : `<br>（自己ベスト ${fmtScore(e.mode, me)}）`}${note}</p>
+    ${rankTable(e.mode, res, official, res.name || e.name)}
+    ${titleCaption(e.mode)}`;
   const tier = official && tierOf(me.rank);
-  if (tier) $('#badge').innerHTML = `<span class="badge ${tier.key}">${tier.icon} ${T[tier.key]}</span>`;
-  Object.assign(lastResult, { rank: official ? me.rank : 0, isBest, bestText: fmt(me) });
+  if (tier) $('#badge').innerHTML = badgeHTML(e.mode, tier);
+  Object.assign(lastResult, { rank: official ? me.rank : 0, isBest, bestText: fmtScore(e.mode, me) });
+  if (!res.local && res.name) Names.set(res.name);
 }
 function showResult() {
   S.shown = true;
@@ -1420,8 +1540,10 @@ function showResult() {
   }).catch(err => {
     if (seq !== resultSeq) return;
     const code = err && err.serverError;
-    if (code === 'name_taken') Names.owned = null;
+    if (code === 'device_has_name' && err.serverName) Names.set(err.serverName);
+    if (code === 'name_taken' && nameKey(Names.registered) === nameKey(e.name)) Names.set('');
     const msg = code === 'name_taken' ? 'この名前は他の人が登録済みのため、記録できませんでした。タイトルで名前を変えてください'
+      : code === 'device_has_name' ? `この端末は「${escHTML(err.serverName || '')}」で登録済みのため、記録できませんでした。タイトルに戻ると、その名前で遊べます`
       : code === 'invalid_score' ? 'この記録は受け付けられませんでした'
       : '記録の送信に失敗しました';
     $('#rankArea').innerHTML = `<h3>ランキング</h3><p class="rk">${msg}</p>`;
@@ -1444,6 +1566,50 @@ function share() {
   const intent = `https://twitter.com/intent/tweet?text=${encodeURIComponent(lines.join('\n'))}&url=${encodeURIComponent(url)}`;
   const w = window.open(intent, '_blank');
   if (!w) location.href = intent;
+}
+
+// ===== タイトル画面の「ランキングを見る」 =====
+let rankTab = 'walk', rankData = null, rankSeq = 0;
+function openRanking() {
+  rankTab = lastMode;
+  rankData = null;
+  $('#title').classList.remove('show');
+  $('#ranking').classList.add('show');
+  $('#ranking').scrollTop = 0;
+  renderRankView();
+  const seq = ++rankSeq;
+  Rank.fetchAll().then(d => {
+    if (seq !== rankSeq) return;
+    rankData = d;
+    if (!d.local) Names.set(d.name || '');
+    renderRankView();
+  });
+}
+function closeRanking() {
+  rankSeq++;
+  $('#ranking').classList.remove('show');
+  $('#title').classList.add('show');
+}
+function renderRankView() {
+  document.querySelectorAll('#ranking .tab').forEach(b => b.classList.toggle('on', b.dataset.tab === rankTab));
+  const box = $('#rankView'), d = rankData, mode = rankTab;
+  if (!d) {
+    box.innerHTML = '<p class="rk">読み込み中…</p>';
+    return;
+  }
+  const v = d[mode] || { total: 0, top: [] };
+  const official = !d.fallback;
+  const me = v.me;
+  const tier = official && me && tierOf(me.rank);
+  const note = d.fallback ? 'オンラインランキングに接続できなかったため、この端末内の記録を表示しています'
+    : d.local ? 'この端末内の記録です' : '';
+  const head = me
+    ? `あなたの順位：<b>${me.rank}位</b>（${fmtScore(mode, me)}）／ ${v.total}人中`
+    : `参加者 ${v.total}人`;
+  box.innerHTML = `${tier ? `<div>${badgeHTML(mode, tier)}</div>` : ''}
+    <p class="rk">${head}${note ? `<br><small>${note}</small>` : ''}</p>
+    ${rankTable(mode, v, official, d.name || (isOnline() && Names.registered) || playerName)}
+    ${titleCaption(mode)}`;
 }
 
 // ===== 入力 =====
@@ -1506,31 +1672,59 @@ addEventListener('keyup', e => {
   if (e.code === 'KeyX' || e.code === 'KeyK') kb.guard = false;
 });
 addEventListener('blur', () => { kb.up = kb.down = kb.guard = false; btnGuard = false; });
-let claiming = false;
+
+// ===== タイトル画面：名前の登録とスタート =====
+let claiming = false, pending = null;
 function setTitleBusy(on) {
-  document.querySelectorAll('#title [data-start]').forEach(b => { b.disabled = on; });
+  claiming = on;
+  document.querySelectorAll('#title button').forEach(b => { b.disabled = on; });
 }
-document.addEventListener('click', async e => {
-  const b = e.target.closest('[data-start],[data-act]');
-  if (!b || b.disabled) return;
-  unlockAudio();
-  if (b.dataset.act === 'title') { showTitle(); return; }
-  if (b.dataset.act === 'share') { share(); return; }
-  const mode = b.dataset.start;
-  if (!$('#title').classList.contains('show')) { startGame(mode); return; }
-  if (claiming) return;
-  const nameInput = $('#name'), msg = $('#nameMsg');
-  const name = cleanName(nameInput.value);
+function showNameMsg(text, info = false) {
+  const msg = $('#nameMsg');
+  msg.className = info ? 'err info' : 'err';
+  msg.textContent = text;
+}
+// スタートボタン（まだ登録していない端末は、名前が空いているか確かめてから登録の確認を出す）
+async function startFromTitle(mode) {
+  const field = $('#name');
+  const locked = isOnline() && !!Names.registered;
+  const name = locked ? Names.registered : cleanName(field.value);
   if (!name) {
-    msg.className = 'err';
-    msg.textContent = 'ユーザー名を入力してください';
-    nameInput.focus();
+    showNameMsg('ユーザー名を入力してください');
+    field.focus();
     return;
   }
-  claiming = true;
+  if (!isOnline() || locked) {
+    claimAndStart(name, mode);
+    return;
+  }
   setTitleBusy(true);
-  msg.className = 'err info';
-  msg.textContent = isOnline() ? '名前を確認中…' : '';
+  showNameMsg('名前を確認中…', true);
+  let r = null;
+  try {
+    r = await rpc('check_name', { p_name: name, p_token: token() });
+  } catch (err) {} // 通信できないときは確認を省く
+  setTitleBusy(false);
+  if (r && !r.ok) {
+    if (r.error === 'device_has_name' && r.name) Names.set(r.name);
+    showNameMsg(nameError(r));
+    return;
+  }
+  if (r && r.registered) {
+    Names.set(r.name);
+    claimAndStart(r.name, mode);
+    return;
+  }
+  showNameMsg('');
+  pending = { name: (r && r.name) || name, mode };
+  $('#confirmName').textContent = pending.name;
+  $('#confirmBox').hidden = false;
+}
+// 名前を登録（確認）してからゲームを始める
+async function claimAndStart(name, mode) {
+  if (claiming) return;
+  setTitleBusy(true);
+  showNameMsg(isOnline() && !Names.confirmed ? '名前を確認中…' : '', true);
   try {
     let r;
     try {
@@ -1538,21 +1732,50 @@ document.addEventListener('click', async e => {
     } catch (err) {
       r = { ok: true, name }; // 通信できないときも遊べるようにする（記録は端末内に保存）
     }
+    $('#confirmBox').hidden = true;
+    pending = null;
     if (!r.ok) {
-      msg.className = 'err';
-      msg.textContent = r.error === 'name_taken'
-        ? 'このユーザー名は既に使われています。別の名前にしてください（別の端末で登録した名前も使えません）'
-        : 'この名前は使えません。別の名前にしてください';
+      showNameMsg(nameError(r));
       return;
     }
     playerName = r.name;
     store.set('esc3d_name', playerName);
-    msg.textContent = '';
+    showNameMsg('');
     startGame(mode);
   } finally {
-    claiming = false;
     setTitleBusy(false);
   }
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-start],[data-act],[data-tab]');
+  if (!b || b.disabled) return;
+  unlockAudio();
+  if (b.dataset.tab) {
+    rankTab = b.dataset.tab;
+    renderRankView();
+    return;
+  }
+  const act = b.dataset.act;
+  if (act === 'title') { showTitle(); return; }
+  if (act === 'share') { share(); return; }
+  if (act === 'ranking') { openRanking(); return; }
+  if (act === 'back') { closeRanking(); return; }
+  if (act === 'cancel') { $('#confirmBox').hidden = true; pending = null; return; }
+  if (act === 'confirm') { if (pending) claimAndStart(pending.name, pending.mode); return; }
+  const mode = b.dataset.start;
+  if (!mode) return;
+  if ($('#title').classList.contains('show')) {
+    if (!claiming) startFromTitle(mode);
+    return;
+  }
+  // 結果画面から続けて遊ぶ
+  if (isOnline() && Names.registered) playerName = Names.registered;
+  startGame(mode);
+});
+$('#name').addEventListener('input', () => {
+  $('#confirmBox').hidden = true;
+  pending = null;
+  showNameMsg('');
 });
 
 // ===== 画面サイズ・ループ =====
@@ -1596,6 +1819,7 @@ function loop(now) {
 buildWorld();
 resize();
 showTitle();
+Names.sync();
 if (secretKeyPasted()) {
   $('#title .inner').insertAdjacentHTML('afterbegin', '<p class="err">設定エラー：secret key（秘密のキー）が貼り付けられています。publishable key に差し替え、Supabase でそのキーを無効化してください。</p>');
 }
